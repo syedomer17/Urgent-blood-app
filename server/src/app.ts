@@ -3,6 +3,7 @@ import http from 'http';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import { rateLimit } from 'express-rate-limit';
 import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
@@ -14,6 +15,7 @@ import { StatusCodes } from 'http-status-codes';
 import connectDB from './config/db';
 import logger from './config/logger';
 import { socketManager } from './sockets/socketManager';
+import { InnovativeFeatures } from './sockets/innovativeFeatures';
 import * as requestService from './modules/requests/requests.service';
 
 // Routes
@@ -36,6 +38,9 @@ app.use(express.json());
 
 // Parse URL-encoded bodies
 app.use(express.urlencoded({ extended: true }));
+
+// Parse cookies
+app.use(cookieParser(config.jwt.secret));
 
 // Gzip compression
 app.use(compression());
@@ -80,55 +85,74 @@ app.use((req: Request, res: Response, next) => {
 // Global Error Handler
 app.use(globalErrorHandler);
 
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    process.exit(1);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err: any) => {
+    console.error('Uncaught Exception:', err);
+    if (err instanceof Error) {
+        console.error('Error message:', err.message);
+        console.error('Stack:', err.stack);
+    }
+    process.exit(1);
+});
+
 const startServer = async () => {
     try {
-        // Connect to Database
         await connectDB();
-
         const server = http.createServer(app);
-
-        // Initialize Socket.io
         socketManager.init(server);
 
-        // Scheduler for Auto-Escalation (every 5 minutes)
+        // Background tasks
         setInterval(() => {
-            logger.info('Running auto-escalation job...');
-            requestService.escalateAllPendingRequests().catch(err => logger.error('Auto-escalation failed', err));
+            InnovativeFeatures.generateDonorLeaderboard().catch(e => logger.error(e?.message));
+        }, 5 * 60 * 1000);
+
+        setInterval(() => {
+            InnovativeFeatures.generateLiveHeatmap().catch(e => logger.error(e?.message));
+        }, 2 * 60 * 1000);
+
+        setInterval(() => {
+            InnovativeFeatures.generateLiveAnalytics().catch(e => logger.error(e?.message));
+        }, 3 * 60 * 1000);
+
+        setInterval(() => {
+            requestService.escalateAllPendingRequests().catch(e => logger.error(e?.message));
         }, 5 * 60 * 1000);
 
         server.listen(config.port, () => {
-            logger.info(`Server running in ${config.env} mode on port ${config.port}`);
+            logger.info(`Server running on port ${config.port}`);
         });
 
-        // Handle unhandled promise rejections
-        process.on('unhandledRejection', (err: Error) => {
-            logger.error('UNHANDLED REJECTION! 💥 Shutting down...');
-            logger.error(err.name, err.message);
-            server.close(() => {
-                process.exit(1);
-            });
-        });
-
-        // Handle uncaught exceptions
-        process.on('uncaughtException', (err: Error) => {
-            logger.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
-            logger.error(err.name, err.message);
+        server.on('error', (err: any) => {
+            if (err.code === 'EADDRINUSE') {
+                console.error(`Port ${config.port} is already in use`);
+            } else {
+                console.error('Server error:', err);
+            }
             process.exit(1);
         });
 
-        // Graceful Shutdown
         process.on('SIGTERM', () => {
-            logger.info('SIGTERM RECEIVED. Shutting down gracefully');
-            server.close(() => {
-                logger.info('💥 Process terminated!');
-            });
+            logger.info('Shutting down...');
+            server.close();
         });
     } catch (error) {
-        logger.error('Failed to start server:', error);
+        console.error('Server startup error:', error);
+        if (error instanceof Error) {
+            console.error('Error details:', error.message, error.stack);
+        }
         process.exit(1);
     }
 };
 
-startServer();
+startServer().catch(err => {
+    console.error('Fatal error:', err);
+    process.exit(1);
+});
 
 export default app;

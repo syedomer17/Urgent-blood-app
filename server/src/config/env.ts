@@ -11,6 +11,7 @@ const envSchema = Joi.object({
     JWT_ACCESS_EXPIRATION: Joi.string().default('15m').description('JWT Access Token Expiration'),
     JWT_REFRESH_EXPIRATION: Joi.string().default('7d').description('JWT Refresh Token Expiration'),
     CORS_ORIGIN: Joi.string().default('*').description('CORS Origin'),
+    LOG_LEVEL: Joi.string().default('debug').valid('error', 'warn', 'info', 'debug').description('Logging Level'),
 }).unknown();
 
 const { value: envVars, error } = envSchema.prefs({ errors: { label: 'key' } }).validate(process.env);
@@ -32,5 +33,8 @@ export const config = {
     },
     cors: {
         origin: envVars.CORS_ORIGIN,
+    },
+    logging: {
+        level: envVars.LOG_LEVEL,
     },
 };

@@ -8,11 +8,13 @@ export const registerSchema = Joi.object({
     bloodGroup: Joi.string().valid('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-').when('role', { is: 'donor', then: Joi.required(), otherwise: Joi.optional() }),
     contactNumber: Joi.string().optional(),
     location: Joi.object({
-        location: Joi.object({
-            latitude: Joi.number().min(-90).max(90),
-            longitude: Joi.number().min(-180).max(180),
-            address: Joi.string(),
-        }).optional(),
+        latitude: Joi.number().min(-90).max(90),
+        longitude: Joi.number().min(-180).max(180),
+        address: Joi.string(),
+        state: Joi.string(),
+        city: Joi.string(),
+        zipCode: Joi.string(),
+        areaName: Joi.string(),
     }).optional(),
 });
 

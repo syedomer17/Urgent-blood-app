@@ -17,11 +17,61 @@ This document outlines the available API endpoints for the LifeLink Backend.
   "bloodGroup": "O+",
   "contactNumber": "+1234567890",
   "location": {
-    "address": "New York, NY"
+    "address": "123 Main Street, New York, NY 10001"
   }
 }
 ```
-*Note: `bloodGroup` is required for donors. `location` can be just `address` (auto-geocoded) or `{ latitude, longitude }`.*
+
+**Location Field Details:**
+- **address** (string, required for geocoding): Full address to be geocoded
+- **latitude** (number, optional): Latitude coordinate (-90 to 90)
+- **longitude** (number, optional): Longitude coordinate (-180 to 180)
+- **state** (string, optional): State/Province (auto-populated if using address)
+- **city** (string, optional): City name (auto-populated if using address)
+- **zipCode** (string, optional): Postal/Zip code (auto-populated if using address)
+- **areaName** (string, optional): Neighborhood or area name (auto-populated if using address)
+
+**Examples:**
+
+*Example 1: Using address (auto-geocoded)*
+```json
+{
+  "location": {
+    "address": "Times Square, New York, NY"
+  }
+}
+```
+
+*Example 2: Using precise coordinates*
+```json
+{
+  "location": {
+    "latitude": 40.7580,
+    "longitude": -73.9855,
+    "address": "Times Square, New York, NY"
+  }
+}
+```
+
+*Example 3: Providing all location details*
+```json
+{
+  "location": {
+    "address": "123 Main Street, New York, NY 10001",
+    "latitude": 40.7128,
+    "longitude": -74.0060,
+    "state": "New York",
+    "city": "New York",
+    "zipCode": "10001",
+    "areaName": "Lower Manhattan"
+  }
+}
+```
+
+**Geolocation Process:**
+- If only `address` is provided, the server will use OpenStreetMap to geocode and extract coordinates, state, city, zip code, and area information
+- If `latitude` and `longitude` are provided, they will be used directly
+- All location fields are optional; missing fields will be auto-populated during geocoding when an address is provided
 
 ### 2. Login
 **POST** `/login`
@@ -72,10 +122,29 @@ This document outlines the available API endpoints for the LifeLink Backend.
 {
   "availability": true,
   "location": {
-    "address": "123 Main St, Springfield"
+    "latitude": 40.7128,
+    "longitude": -74.0060,
+    "address": "123 Main St, Springfield, NY 10001",
+    "state": "New York",
+    "city": "Springfield",
+    "zipCode": "10001",
+    "areaName": "Downtown"
   }
 }
 ```
+
+**Update Location Options:**
+- **Option 1:** Provide only `address` - coordinates and other details will be auto-geocoded
+- **Option 2:** Provide `latitude` and `longitude` - precise location with optional address
+- **Option 3:** Provide all fields manually for complete control
+
+**Auto-Geolocation Features:**
+- When address is provided alone, the system uses OpenStreetMap to extract:
+  - Latitude and longitude coordinates
+  - State/Province information
+  - City information
+  - Postal/Zip code
+  - Neighborhood/Area name
 
 ---
 
@@ -94,12 +163,48 @@ This document outlines the available API endpoints for the LifeLink Backend.
   "urgency": "critical",
   "contactNumber": "+1987654321",
   "location": {
-    "address": "City Hospital, Downtown"
+    "address": "City Hospital, Downtown, New York, NY 10001",
+    "state": "New York",
+    "city": "New York",
+    "zipCode": "10001",
+    "areaName": "Downtown"
   },
   "notes": "Urgent need for surgery"
 }
 ```
-*Urgency options: `low`, `medium`, `high`, `critical`*
+
+**Location Field Details:**
+- **address** (string, required for geocoding): Full address of the hospital/facility
+- **latitude** (number, optional): Latitude coordinate (-90 to 90)
+- **longitude** (number, optional): Longitude coordinate (-180 to 180)
+- **state** (string, optional): State/Province (auto-populated if using address)
+- **city** (string, optional): City name (auto-populated if using address)
+- **zipCode** (string, optional): Postal/Zip code (auto-populated if using address)
+- **areaName** (string, optional): Area/Neighborhood name (auto-populated if using address)
+
+**Location Examples:**
+
+*Example 1: Auto-geocoded address*
+```json
+{
+  "location": {
+    "address": "St. Mary's Hospital, Manhattan, NY"
+  }
+}
+```
+
+*Example 2: With precise coordinates*
+```json
+{
+  "location": {
+    "latitude": 40.7505,
+    "longitude": -73.9972,
+    "address": "St. Mary's Hospital, Manhattan, NY"
+  }
+}
+```
+
+*Note: Urgency options: `low`, `medium`, `high`, `critical`*
 
 ### 8. Get My Requests
 **GET** `/my-requests`

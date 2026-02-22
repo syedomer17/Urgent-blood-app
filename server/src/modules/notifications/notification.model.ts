@@ -4,7 +4,7 @@ export interface INotification extends Document {
     recipientId: mongoose.Types.ObjectId;
     title: string;
     message: string;
-    type: 'blood_request' | 'request_accepted' | 'system';
+    type: 'blood_request' | 'request_accepted' | 'system' | 'donor_online' | 'request_status_change' | 'emergency' | 'achievement' | 'message' | 'donor_match' | 'donation_completed';
     relatedEntityId?: mongoose.Types.ObjectId; // e.g., requestId
     isRead: boolean;
     createdAt: Date;
@@ -28,7 +28,7 @@ const notificationSchema = new Schema<INotification>(
         },
         type: {
             type: String,
-            enum: ['blood_request', 'request_accepted', 'system'],
+            enum: ['blood_request', 'request_accepted', 'system', 'donor_online', 'request_status_change', 'emergency', 'achievement', 'message', 'donor_match', 'donation_completed'],
             required: true,
         },
         relatedEntityId: {

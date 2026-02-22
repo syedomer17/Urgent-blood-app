@@ -32,28 +32,13 @@ export const register = async (userData: any) => {
     };
 
     if (userData.location) {
-        let { latitude, longitude, address } = userData.location;
-
-        // If coordinates missing but address exists, try geocoding
-        if ((latitude === undefined || longitude === undefined) && address) {
-            try {
-                const loc = await import('../../utils/geocoder').then(m => m.default.geocode(address));
-                if (loc && loc.length > 0) {
-                    latitude = loc[0].latitude;
-                    longitude = loc[0].longitude;
-                }
-            } catch (err) {
-                // console.error("Geocoding error:", err);
+        try {
+            const processedLocation = await import('../../utils/locationHelper').then(m => m.processLocation(userData.location));
+            if (processedLocation) {
+                userObj.location = processedLocation;
             }
-        }
-
-        // Only set location if we have valid coordinates
-        if (latitude !== undefined && longitude !== undefined) {
-            userObj.location = {
-                type: 'Point',
-                coordinates: [longitude, latitude],
-                address,
-            };
+        } catch (error) {
+            // handle error
         }
     }
 

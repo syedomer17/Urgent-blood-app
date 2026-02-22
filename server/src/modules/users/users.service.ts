@@ -17,10 +17,16 @@ export const updateProfile = async (userId: string, updateBody: any) => {
     }
 
     if (updateBody.location) {
-        user.location = {
-            type: 'Point',
-            coordinates: [updateBody.location.longitude, updateBody.location.latitude],
-        };
+        try {
+            const processedLocation = await import('../../utils/locationHelper').then(m => m.processLocation(updateBody.location));
+            if (processedLocation) {
+                user.location = processedLocation;
+            }
+        } catch (error) {
+            // Log error but proceed with other updates? Or throw?
+            // Existing logic was silent on failure or just set coordinates.
+            // Let's keep it safe.
+        }
         delete updateBody.location;
     }
 

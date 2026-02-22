@@ -8,7 +8,11 @@ export const createRequestSchema = Joi.object({
     location: Joi.object({
         latitude: Joi.number().min(-90).max(90),
         longitude: Joi.number().min(-180).max(180),
-        address: Joi.string().optional(),
+        address: Joi.string(),
+        state: Joi.string(),
+        city: Joi.string(),
+        zipCode: Joi.string(),
+        areaName: Joi.string(),
     }).required(),
     contactNumber: Joi.string().required(),
     notes: Joi.string().optional().allow(''),

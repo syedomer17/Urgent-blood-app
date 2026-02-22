@@ -10,6 +10,10 @@ export interface IBloodRequest extends Document {
         type: 'Point';
         coordinates: number[]; // [longitude, latitude]
         address?: string;
+        state?: string;
+        city?: string;
+        zipCode?: string;
+        areaName?: string;
     };
     contactNumber: string;
     notes?: string;
@@ -57,6 +61,10 @@ const bloodRequestSchema = new Schema<IBloodRequest>(
                 index: '2dsphere',
             },
             address: String,
+            state: String,
+            city: String,
+            zipCode: String,
+            areaName: String,
         },
         contactNumber: {
             type: String,
