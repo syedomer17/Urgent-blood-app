@@ -8,6 +8,12 @@ const router = express.Router();
 
 router.use(protect); // All routes protected
 
+// GET all users — any authenticated user can view the donor list
+router.get('/', userController.getAllUsers);
+
+// GET donors with location — for map view
+router.get('/donors', userController.getDonors);
+
 /**
  * @swagger
  * tags:

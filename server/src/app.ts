@@ -31,7 +31,10 @@ const app = express();
 app.use(helmet());
 
 // Enable CORS
-app.use(cors({ origin: config.cors.origin }));
+app.use(cors({
+    origin: config.cors.origin,
+    credentials: true
+}));
 
 // Parse JSON bodies
 app.use(express.json());

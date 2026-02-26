@@ -13,3 +13,14 @@ export const updateProfile = catchAsync(async (req: Request, res: Response) => {
     const user = await userService.updateProfile(req.user!._id.toString(), req.body);
     sendResponse(res, StatusCodes.OK, true, 'User profile updated successfully', user);
 });
+
+export const getAllUsers = catchAsync(async (_req: Request, res: Response) => {
+    const users = await userService.getAllUsers();
+    sendResponse(res, StatusCodes.OK, true, 'Users retrieved successfully', users);
+});
+
+export const getDonors = catchAsync(async (_req: Request, res: Response) => {
+    const donors = await userService.getDonors();
+    sendResponse(res, StatusCodes.OK, true, 'Donors retrieved successfully', donors);
+});
+

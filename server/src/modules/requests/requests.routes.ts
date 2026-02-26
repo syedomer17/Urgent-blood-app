@@ -8,6 +8,12 @@ const router = express.Router();
 
 router.use(protect);
 
+// GET all blood requests — any authenticated user can view
+router.get('/', requestController.getAllRequests);
+
+// GET map data — pending requests with location (for map view)
+router.get('/map-data', requestController.getMapData);
+
 /**
  * @swagger
  * tags:

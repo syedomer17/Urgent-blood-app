@@ -34,3 +34,17 @@ export const updateProfile = async (userId: string, updateBody: any) => {
     await user.save();
     return user;
 };
+
+export const getAllUsers = async () => {
+    return await User.find()
+        .select('-password -refreshToken')
+        .sort({ trustRating: -1 });
+};
+
+export const getDonors = async () => {
+    return await User.find({
+        role: 'donor',
+        'location.coordinates': { $exists: true, $ne: [] },
+    }).select('name bloodGroup availability trustRating totalDonations location contactNumber');
+};
+

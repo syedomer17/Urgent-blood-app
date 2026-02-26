@@ -165,3 +165,19 @@ export const getRequestById = async (id: string) => {
 export const getMyRequests = async (requesterId: string) => {
     return await BloodRequest.find({ requesterid: requesterId }).sort({ createdAt: -1 });
 };
+
+export const getAllRequests = async () => {
+    return await BloodRequest.find()
+        .populate('requesterid', 'name email contactNumber')
+        .sort({ createdAt: -1 });
+};
+
+export const getMapData = async () => {
+    return await BloodRequest.find({
+        status: 'pending',
+        'location.coordinates': { $exists: true, $ne: [] },
+    })
+        .select('patientName bloodGroup urgency unitsRequired location status')
+        .populate('requesterid', 'name')
+        .sort({ createdAt: -1 });
+};

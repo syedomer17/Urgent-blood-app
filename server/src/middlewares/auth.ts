@@ -22,14 +22,14 @@ declare global {
 export const protect = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     let token;
     
-    // Check Authorization header first
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-        token = req.headers.authorization.split(' ')[1];
+    // Check cookies first (primary method)
+    if (req.cookies && req.cookies.accessToken) {
+        token = req.cookies.accessToken;
     }
     
-    // If no token in header, check cookies
-    if (!token && req.cookies) {
-        token = req.cookies.accessToken;
+    // Fallback: Check Authorization header
+    if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        token = req.headers.authorization.split(' ')[1];
     }
 
     if (!token) {
@@ -46,7 +46,11 @@ export const protect = catchAsync(async (req: Request, res: Response, next: Next
 
         req.user = currentUser;
         next();
-    } catch (error) {
+    } catch (error: any) {
+        // Distinguish between expired and invalid tokens
+        if (error.name === 'TokenExpiredError') {
+            return next(new AppError('Your session has expired. Please refresh your token or log in again.', StatusCodes.UNAUTHORIZED));
+        }
         return next(new AppError('Invalid token. Please log in again!', StatusCodes.UNAUTHORIZED));
     }
 });
