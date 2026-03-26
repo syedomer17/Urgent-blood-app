@@ -1,0 +1,912 @@
+================================================================================
+                    LIFELINK - BLOOD DONATION APP
+                 COMPLETE BACKEND & FRONTEND DOCUMENTATION
+              (For AI-Assisted Frontend UI Development Reference)
+================================================================================
+
+TABLE OF CONTENTS:
+1.  Project Overview & Tech Stack
+2.  User Roles & Permissions
+3.  Authentication System
+4.  Backend API Endpoints (Complete)
+5.  Database Models & Schemas
+6.  Socket.IO Real-Time Events
+7.  Validation Rules
+8.  Blood Group Compatibility Logic
+9.  Existing Frontend Structure
+10. UI Design System & Patterns
+11. Key Features Summary
+12. Environment & Config
+
+================================================================================
+1. PROJECT OVERVIEW & TECH STACK
+================================================================================
+
+LifeLink is a real-time blood donation platform that connects blood donors
+with requesters using geospatial matching, live notifications, and a trust
+rating system.
+
+BACKEND STACK:
+- Framework: Express.js 5.2.1 (TypeScript)
+- Database: MongoDB with Mongoose 9.2.1
+- Authentication: JWT (httpOnly cookies) + bcrypt
+- Real-time: Socket.io 4.8.3
+- Validation: Joi + Zod
+- Security: Helmet, CORS, express-rate-limit, hpp
+- Geocoding: node-geocoder (OpenStreetMap provider)
+- Logging: Winston + Morgan
+- Docs: Swagger/OpenAPI at /api-docs
+
+FRONTEND STACK:
+- React 19.2.0 + TypeScript 5.9.3
+- Vite 8.0.0-beta.13
+- React Router DOM 7.13.1
+- Tailwind CSS 4.2.1
+- Leaflet + react-leaflet (OpenStreetMap maps)
+- React Hot Toast (notifications)
+- Lucide React (icons)
+- Radix UI (accessible primitives)
+- Country State City (location dropdowns)
+- React Phone Input 2
+
+BASE URL: http://localhost:9000/api/v1
+ALL API RESPONSES follow this format:
+{
+  "success": true/false,
+  "message": "string",
+  "data": { ... }  // optional
+}
+
+================================================================================
+2. USER ROLES & PERMISSIONS
+================================================================================
+
+There are 3 roles: "donor", "requester", "admin"
+
+DONOR:
+- Register with blood group (required)
+- Toggle availability status on/off
+- Receive blood request notifications (matching blood group + proximity)
+- Accept blood requests
+- View nearby donors and requesters on map
+- Send/receive direct messages
+- Earn trust ratings and achievements
+- Appear on leaderboard
+- Receive proximity alerts when near a request location
+
+REQUESTER:
+- Register (blood group NOT required)
+- Create blood requests with urgency levels
+- View matched donors
+- Receive notifications when donor accepts
+- Send/receive direct messages to donors
+- View own requests and their status
+
+ADMIN:
+- All above permissions
+- View admin dashboard with statistics
+- Broadcast emergency alerts to all compatible donors
+- Access analytics (total donors, active requests, completed donations,
+  blood group distribution, average response time)
+
+================================================================================
+3. AUTHENTICATION SYSTEM
+================================================================================
+
+METHOD: JWT tokens stored in httpOnly cookies (NOT localStorage)
+- Access Token: expires in 15 minutes
+- Refresh Token: expires in 7 days
+- Refresh tokens are hashed (bcrypt) and stored in user.refreshTokens array
+- Token rotation: on each refresh, old token replaced with new one
+
+COOKIE SETTINGS:
+- httpOnly: true
+- secure: true (production)
+- sameSite: strict
+
+FLOW:
+1. Register/Login -> Server sets accessToken + refreshToken cookies
+2. All API requests include credentials: 'include' for cookie handling
+3. On 401 response -> Auto-refresh token via /auth/refresh-token
+4. Queue mechanism handles multiple requests during refresh
+5. Logout -> Server removes refresh token hash, clears cookies
+
+CLIENT-SIDE:
+- User data cached in localStorage for quick hydration
+- On app load: check localStorage first, then verify with server (GET /users/profile)
+- AuthContext provides: user, isAuthenticated, isLoading, login(), register(),
+  logout(), updateProfile()
+
+================================================================================
+4. BACKEND API ENDPOINTS (COMPLETE)
+================================================================================
+
+All protected routes require the accessToken cookie to be present.
+"restrictTo" means only specific roles can access.
+
+--------------------------------------------------------------------------------
+AUTH ROUTES: /api/v1/auth
+--------------------------------------------------------------------------------
+
+POST /auth/register
+  - Public (no auth required)
+  - Body: {
+      name: string (required),
+      email: string (required),
+      password: string (required, min 6 chars),
+      role: "donor" | "requester" (default: "donor"),
+      bloodGroup: string (required if role=donor, one of: A+, A-, B+, B-, AB+, AB-, O+, O-),
+      contactNumber: string (optional),
+      location: {                    // optional
+        lat: number,
+        lng: number,
+        address: string,
+        state: string,
+        city: string,
+        zipCode: string
+      }
+    }
+  - Response: User object (tokens set in cookies)
+  - Notes: Password hashed with bcrypt (10 rounds), location geocoded if address provided
+
+POST /auth/login
+  - Public
+  - Body: { email: string, password: string }
+  - Response: User object (tokens set in cookies)
+
+POST /auth/refresh-token
+  - Body: { refreshToken: string } (optional, uses cookie if not in body)
+  - Response: New tokens set in cookies
+
+POST /auth/logout
+  - Protected (requires auth)
+  - Body: { refreshToken: string } (optional)
+  - Response: { success: true, message: "Logged out" }
+  - Clears cookies
+
+--------------------------------------------------------------------------------
+USER ROUTES: /api/v1/users
+--------------------------------------------------------------------------------
+
+GET /users
+  - Protected
+  - Response: Array of all users sorted by trustRating descending
+
+GET /users/donors
+  - Protected
+  - Response: Array of donors with valid location data
+
+GET /users/profile
+  - Protected
+  - Response: Current user's full profile
+
+PATCH /users/profile
+  - Protected
+  - Body (at least 1 field required): {
+      name: string (optional),
+      bloodGroup: string (optional, enum),
+      availability: boolean (optional),
+      location: {
+        lat: number,
+        lng: number,
+        address: string,
+        state: string,
+        city: string,
+        zipCode: string
+      } (optional)
+    }
+  - Response: Updated user object
+
+--------------------------------------------------------------------------------
+BLOOD REQUEST ROUTES: /api/v1/requests
+--------------------------------------------------------------------------------
+
+GET /requests
+  - Protected
+  - Response: All blood requests, sorted by createdAt descending
+  - Populated: requesterid (name, email, contactNumber)
+
+GET /requests/map-data
+  - Protected
+  - Response: Pending requests with location data for map view
+  - Fields: patientName, bloodGroup, urgency, unitsRequired, status,
+            location, requesterid (name)
+
+POST /requests
+  - Protected, restrictTo('requester', 'admin')
+  - Body: {
+      patientName: string (required),
+      bloodGroup: string (required, enum: A+, A-, B+, B-, AB+, AB-, O+, O-),
+      unitsRequired: number (required, min: 1),
+      urgency: "low" | "medium" | "high" | "critical" (required),
+      location: {
+        lat: number (required),
+        lng: number (required),
+        address: string,
+        state: string,
+        city: string,
+        zipCode: string
+      } (required),
+      contactNumber: string (required),
+      notes: string (optional)
+    }
+  - Response: Created request object
+  - Side effects:
+    * Triggers donor matching (geospatial + blood compatibility)
+    * Creates notifications for matched donors
+    * Broadcasts via socket to donor:room
+    * Runs predictive matching algorithm for top 5 perfect matches
+
+GET /requests/my-requests
+  - Protected, restrictTo('requester')
+  - Response: Current requester's own requests, sorted by createdAt descending
+
+GET /requests/:id
+  - Protected
+  - Response: Single request by ID, populated with requester info
+
+--------------------------------------------------------------------------------
+DONATION ROUTES: /api/v1/donations
+--------------------------------------------------------------------------------
+
+POST /donations/accept
+  - Protected, restrictTo('donor')
+  - Body: { requestId: string (required) }
+  - Response: { donation: DonationHistory, request: updatedBloodRequest }
+  - Side effects (all in MongoDB transaction):
+    * Updates request status to "accepted"
+    * Creates DonationHistory record (status: "completed")
+    * Updates donor's lastDonationDate to now
+    * Creates notification for requester
+    * Emits socket event to requester
+
+--------------------------------------------------------------------------------
+ADMIN ROUTES: /api/v1/admin
+--------------------------------------------------------------------------------
+
+GET /admin/stats
+  - Protected, restrictTo('admin')
+  - Response: {
+      totalDonors: number,
+      activeRequests: number,
+      completedDonations: number,
+      bloodGroupDistribution: [
+        { _id: "A+", count: 5 },
+        { _id: "B-", count: 3 },
+        ...
+      ],
+      averageResponseTimeMinutes: number
+    }
+
+--------------------------------------------------------------------------------
+DONOR ROUTES: /api/v1/donors
+--------------------------------------------------------------------------------
+
+GET /donors
+  - Protected
+  - Response: Array of donors with valid GeoJSON location
+  - Fields: name, bloodGroup, availability, trustRating, totalDonations,
+            location, contactNumber
+
+GET /donors/near
+  - Protected (rate limited: 30 requests/minute)
+  - Query params:
+      lat: number (required, -90 to 90)
+      lng: number (required, -180 to 180)
+      radius: number (optional, default: 10000 meters, range: 1-500000)
+  - Response: Donors within specified radius
+  - Uses MongoDB $nearSphere geospatial query
+
+--------------------------------------------------------------------------------
+OTHER ENDPOINTS
+--------------------------------------------------------------------------------
+
+GET / or /health
+  - Public health check
+  - Response: { status: "ok", message: "LifeLink API is running" }
+
+GET /api-docs
+  - Swagger documentation UI
+
+RATE LIMITING:
+  - Global: 100 requests per 15 minutes on /api
+  - /donors/near: 30 requests per 1 minute
+
+================================================================================
+5. DATABASE MODELS & SCHEMAS
+================================================================================
+
+--------------------------------------------------------------------------------
+USER MODEL
+--------------------------------------------------------------------------------
+{
+  name: String (required, trimmed),
+  email: String (required, unique, lowercase, trimmed),
+  password: String (required, hidden from queries by default),
+  role: Enum ["donor", "requester", "admin"] (default: "donor"),
+  bloodGroup: Enum ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
+  contactNumber: String (optional),
+  location: {
+    type: "Point",
+    coordinates: [longitude, latitude],  // 2dsphere indexed
+    address: String,
+    country: String,
+    state: String,
+    city: String,
+    zipCode: String,
+    areaName: String
+  },
+  availability: Boolean (default: true),
+  lastDonationDate: Date,
+  refreshTokens: [String] (hidden, stores hashed refresh tokens),
+  trustRating: Number (0-5, default: 0),
+  ratingCount: Number (default: 0),
+  reviews: [{
+    rating: Number,
+    review: String,
+    requestId: ObjectId,
+    createdAt: Date
+  }],
+  totalDonations: Number (default: 0),
+  achievements: [String],
+  notificationPreferences: {
+    urgentRequests: Boolean,
+    nearbyRequests: Boolean,
+    messages: Boolean,
+    donations: Boolean,
+    leaderboard: Boolean,
+    soundEnabled: Boolean,
+    vibrationEnabled: Boolean,
+    quietHours: { start: String, end: String }
+  },
+  avatar: String,
+  isOnline: Boolean (default: false),
+  lastActivity: Date,
+  createdAt: Date,
+  updatedAt: Date
+}
+Indexes: email (unique), role, bloodGroup, bloodGroup+role (compound)
+
+--------------------------------------------------------------------------------
+BLOOD REQUEST MODEL
+--------------------------------------------------------------------------------
+{
+  requesterid: ObjectId (ref: User, required),
+  patientName: String (required, trimmed),
+  bloodGroup: Enum ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] (required),
+  unitsRequired: Number (required, min: 1),
+  urgency: Enum ["low", "medium", "high", "critical"] (required),
+  location: {
+    type: "Point",
+    coordinates: [longitude, latitude] (required, 2dsphere indexed),
+    address: String,
+    state: String,
+    city: String,
+    zipCode: String,
+    areaName: String
+  },
+  contactNumber: String (required),
+  notes: String (optional),
+  status: Enum ["pending", "accepted", "fulfilled", "cancelled"] (default: "pending"),
+  searchRadius: Number (default: 5, in km - auto-escalates),
+  createdAt: Date,
+  updatedAt: Date
+}
+Indexes: status, bloodGroup, status+createdAt (compound)
+
+--------------------------------------------------------------------------------
+DONATION HISTORY MODEL
+--------------------------------------------------------------------------------
+{
+  donorId: ObjectId (ref: User, required),
+  requestId: ObjectId (ref: BloodRequest, required),
+  donationDate: Date (default: now),
+  unitsDonated: Number (required, min: 1),
+  status: Enum ["completed", "failed"] (default: "completed"),
+  notes: String (optional),
+  createdAt: Date,
+  updatedAt: Date
+}
+Indexes: donorId, donationDate (descending)
+
+--------------------------------------------------------------------------------
+NOTIFICATION MODEL
+--------------------------------------------------------------------------------
+{
+  recipientId: ObjectId (ref: User, required),
+  title: String (required),
+  message: String (required),
+  type: Enum [
+    "blood_request",
+    "request_accepted",
+    "system",
+    "donor_online",
+    "request_status_change",
+    "emergency",
+    "achievement",
+    "message",
+    "donor_match",
+    "donation_completed"
+  ] (required),
+  relatedEntityId: ObjectId (optional, e.g., requestId),
+  isRead: Boolean (default: false),
+  createdAt: Date,
+  updatedAt: Date
+}
+Indexes: recipientId, isRead
+
+================================================================================
+6. SOCKET.IO REAL-TIME EVENTS
+================================================================================
+
+CONNECTION:
+- Socket server runs on same HTTP server as Express
+- Auth: Client sends JWT token via socket.handshake.auth.token
+- On connect: user joins their userId room + role room (donor:room / requester:room)
+- Server tracks connected users in a Map
+
+--------------------------------------------------------------------------------
+CLIENT -> SERVER EVENTS (what the frontend emits)
+--------------------------------------------------------------------------------
+
+"update_location"
+  Payload: { latitude: number, longitude: number, address?: string, city?: string, state?: string }
+  Purpose: Update user's real-time location
+  Effect: Updates DB, notifies nearby requesters if user is a donor
+
+"watch_request"
+  Payload: { requestId: string }
+  Purpose: Join a request-specific room for live updates
+
+"unwatch_request"
+  Payload: { requestId: string }
+  Purpose: Leave a request-specific room
+
+"toggle_availability"
+  Payload: { available: boolean }
+  Purpose: Toggle donor's availability status
+  Effect: Broadcasts to requester:room about status change
+
+"accept_request"
+  Payload: { requestId: string }
+  Purpose: Donor accepts a blood request
+  Effect: Updates request status, notifies requester + watchers
+
+"reject_request"
+  Payload: { requestId: string }
+  Purpose: Donor rejects a blood request
+
+"send_message"
+  Payload: { recipientId: string, message: string, requestId?: string }
+  Purpose: Send a direct message to another user
+
+"user_typing"
+  Payload: { recipientId: string, isTyping: boolean }
+  Purpose: Typing indicator for chat
+
+"request_update"
+  Payload: { requestId: string, updateData: object }
+  Purpose: Requester updates their request details
+
+"poll_request_status"
+  Payload: { requestId: string }
+  Purpose: Get current status of a request
+  Response event: emits back { requestId, status, updatedAt }
+
+"get_online_donors"
+  Payload: none
+  Purpose: Get list of currently online, available donors
+
+"broadcast_emergency"
+  Payload: { message: string, bloodGroup: string, urgency: string, location: object }
+  Purpose: Admin broadcasts emergency alert
+  Restriction: Admin role only
+
+--------------------------------------------------------------------------------
+SERVER -> CLIENT EVENTS (what the frontend listens for)
+--------------------------------------------------------------------------------
+
+"active_users_count"
+  Data: { count: number }
+  When: User connects/disconnects
+
+"new_blood_request"
+  Data: { request object }
+  When: New blood request created, sent to donor:room
+
+"blood_request_matched"
+  Data: { requestId, request details }
+  When: Donor is matched to a request
+
+"request_status_changed"
+  Data: { requestId, status, updatedAt }
+  When: Request status changes
+
+"request_accepted"
+  Data: { requestId, donorId, donorName, message }
+  When: A donor accepts the request (sent to requester)
+
+"request_updated"
+  Data: { requestId, updates }
+  When: Request details updated
+
+"live_update"
+  Data: varies
+  When: Generic live update for watched requests
+
+"donor_availability_changed"
+  Data: { donorId, available, donorName }
+  When: A donor toggles availability
+
+"nearby_donor_found"
+  Data: { donor info }
+  When: A compatible donor comes online nearby
+
+"new_notification"
+  Data: { notification object }
+  When: Any new notification
+
+"receive_message"
+  Data: { senderId, senderName, message, requestId, timestamp }
+  When: Direct message received
+
+"user_typing_indicator"
+  Data: { userId, isTyping }
+  When: Another user is typing
+
+"emergency_alert"
+  Data: { message, bloodGroup, urgency, location, timestamp }
+  When: Admin broadcasts emergency
+
+"online_donors_list"
+  Data: [{ userId, name, bloodGroup, location }]
+  When: Response to get_online_donors
+
+"watching_request"
+  Data: { requestId }
+  When: Confirmation of watching a request
+
+"accept_success" / "reject_success"
+  Data: { requestId }
+  When: Confirmation of accept/reject action
+
+"availability_updated"
+  Data: { available: boolean }
+  When: Confirmation of availability toggle
+
+"location_update_success"
+  Data: { message }
+  When: Location update confirmed
+
+"error"
+  Data: { message: string }
+  When: Any socket error occurs
+
+--------------------------------------------------------------------------------
+PERIODIC BROADCASTS (Server auto-emits)
+--------------------------------------------------------------------------------
+
+"leaderboard_update" (every 5 minutes)
+  Data: [{ rank, donorId, name, totalUnitsDonated, donationCount, averageRating, badge }]
+  Badge tiers: "Platinum Donor" (50+), "Gold Donor" (25+), "Silver Donor" (10+),
+               "Bronze Donor" (5+), "New Donor"
+
+"heatmap_update" (every 2 minutes)
+  Data: [{ city, bloodGroup, count, donors: [{name, trustRating}] }]
+
+"analytics_update" (every 3 minutes)
+  Data: {
+    activeRequests: number,
+    availableDonors: number,
+    unitsToday: number,
+    successCount: number,
+    avgResponseTime: number  // in minutes
+  }
+
+================================================================================
+7. VALIDATION RULES
+================================================================================
+
+REGISTRATION:
+- name: required, string, trimmed
+- email: required, valid email, trimmed
+- password: required, min 6 characters
+- role: "donor" or "requester" (default: "donor")
+- bloodGroup: required if donor, must be one of [A+, A-, B+, B-, AB+, AB-, O+, O-]
+- contactNumber: optional string
+- location: optional object with lat/lng/address/state/city/zipCode
+
+LOGIN:
+- email: required, valid email, trimmed
+- password: required
+
+UPDATE PROFILE:
+- At least 1 field required
+- name: optional, trimmed
+- bloodGroup: optional, must be valid enum
+- availability: optional, boolean
+- location: optional object with validated coordinates
+
+CREATE BLOOD REQUEST:
+- patientName: required, trimmed
+- bloodGroup: required, valid enum
+- unitsRequired: required, number, min 1
+- urgency: required, one of ["low", "medium", "high", "critical"]
+- location: required object with lat (required), lng (required), address, state, city, zipCode
+- contactNumber: required
+- notes: optional, allows empty string
+
+ACCEPT DONATION:
+- requestId: required string
+
+NEARBY DONORS QUERY:
+- lat: required, -90 to 90
+- lng: required, -180 to 180
+- radius: optional, 1 to 500000 meters (default: 10000)
+
+================================================================================
+8. BLOOD GROUP COMPATIBILITY LOGIC
+================================================================================
+
+The backend uses this compatibility matrix for donor matching:
+
+Recipient -> Compatible Donor Groups:
+- AB+ can receive from: ALL groups (universal recipient)
+- AB- can receive from: A-, B-, AB-, O-
+- A+  can receive from: A+, A-, O+, O-
+- A-  can receive from: A-, O-
+- B+  can receive from: B+, B-, O+, O-
+- B-  can receive from: B-, O-
+- O+  can receive from: O+, O-
+- O-  can receive from: O- only
+
+O- is the universal donor (can donate to anyone).
+
+DONOR MATCHING CRITERIA:
+1. Compatible blood group (using above matrix)
+2. Donor is available (availability: true)
+3. Donor has valid location
+4. Donor is within search radius (starts at 5km, auto-escalates to max 50km)
+5. Donor hasn't donated in last 90 days
+
+PREDICTIVE MATCHING SCORING (top 5 perfect matches):
+- Distance weight: 40% (closer = higher score)
+- Trust rating weight: 40%
+- Experience weight: 20% (based on totalDonations)
+
+REQUEST ESCALATION:
+- Every 5 minutes, pending requests auto-expand search radius
+- Increment: 5km per escalation
+- Maximum radius: 50km
+- Only escalates if request is older than 15 minutes
+
+================================================================================
+9. EXISTING FRONTEND STRUCTURE
+================================================================================
+
+ROUTING (React Router v7):
+
+Public Routes:
+  /login          -> LoginPage
+  /register       -> RegisterPage
+
+Protected Routes (require authentication):
+  /               -> HomePage (dashboard)
+  /profile        -> ProfilePage
+  /requests       -> RequestsPage (list + map view toggle)
+  /request        -> RequestBloodPage (create request, requester/admin only)
+  /donors         -> DonorsPage (browse donors)
+  /donations      -> DonationsPage (donation history)
+  /update-availability -> UpdateAvailabilityPage (donor only)
+  /admin          -> AdminDashboardPage (admin only, role-guarded)
+
+NAVIGATION:
+  - Top Header: sticky, logo + hamburger menu dropdown
+    - Dropdown: user info, Profile, Requests, Donors, Donations, Admin (if admin), Logout
+  - Bottom Nav: fixed, 4 tabs (Home, Requests, Donors, Profile) with active indicators
+
+FILE STRUCTURE:
+/client/src/
+  /pages/           - All page components
+    Router.tsx       - Main routing logic
+    HomePage.tsx     - Dashboard with stats + quick actions
+    LoginPage.tsx    - Email/password login form
+    RegisterPage.tsx - 2-step registration (basic info -> location/details)
+    ProfilePage.tsx  - View/edit user profile
+    RequestsPage.tsx - Blood requests list + map view
+    RequestBloodPage.tsx - Create new blood request form
+    DonorsPage.tsx   - Browse donors with filters
+    DonationsPage.tsx - Donation history
+    UpdateAvailabilityPage.tsx - Toggle availability
+    AdminDashboardPage.tsx - Admin stats dashboard
+
+  /components/
+    DonorMapView.tsx - Map wrapper (re-exports BloodMap)
+    /shared/
+      Header.tsx - Top navigation header
+      BottomNav.tsx - Bottom tab bar
+      ProtectedRoute.tsx - Route guard with role checking
+    /map/
+      BloodMap.tsx - Leaflet map with donor/request markers
+    /ui/
+      button.tsx, card.tsx, input.tsx, label.tsx, textarea.tsx (shadcn/ui)
+
+  /services/
+    api.ts - All API calls (fetch-based, auto-refresh on 401)
+
+  /context/
+    AuthContext.tsx - Global auth state (user, login, logout, etc.)
+
+  /types/
+    donor.ts - TypeScript interfaces (Donor, DonorLocation, RequestMapItem, etc.)
+
+  /lib/
+    utils.ts - cn() utility for Tailwind class merging
+
+  App.tsx - BrowserRouter + AuthProvider + Router
+  main.tsx - React entry point
+  index.css - Tailwind imports + CSS variables
+
+================================================================================
+10. UI DESIGN SYSTEM & PATTERNS
+================================================================================
+
+COLOR SCHEME:
+  Primary: Red gradient (#b71c1c -> #e53935)
+  Secondary: Various red shades (#c62828, #d32f2f, #ef5350)
+  Background: Gray-50 (#f5f5f7)
+  Text: Gray-800 (primary), Gray-500 (secondary)
+  Success: Green-500/600
+  Warning: Amber/Yellow
+  Error: Red-500/600
+
+TYPOGRAPHY:
+  Font: system-ui stack
+  Weights: 400 (regular), 500 (medium), 600 (semibold), 700 (bold)
+  Responsive sizing with clamp() and sm: breakpoints
+
+COMPONENT PATTERNS:
+
+  Page Headers:
+  - Red gradient background (135deg, #b71c1c -> #e53935)
+  - Decorative blobs (absolute positioned, opacity-10/20)
+  - Large white title + subtitle
+  - Optional stat cards or filter buttons
+
+  Cards:
+  - White background
+  - Rounded-xl or rounded-2xl
+  - Minimal shadow (0 1px 4px rgba(0,0,0,0.04))
+  - Padding: p-3 sm:p-4
+
+  Form Inputs:
+  - Label: uppercase, text-xs, text-gray-500, font-medium, tracking-wide
+  - Input: rounded-xl, bg-gray-50, border transparent
+  - Focus: bg-white, border-red-400, ring-2 ring-red-100
+  - Error: bg-red-50, text-red-600
+
+  Buttons:
+  - Primary: bg-gradient-to-r from-red-600 to-red-500, text-white, rounded-xl
+  - Active: active:scale-[0.97] for press feedback
+  - Shadow on primary buttons
+
+  Loading Spinner:
+  - w-10 h-10 rounded-full border-4 border-red-100 border-t-red-500 animate-spin
+
+  Empty State:
+  - Centered icon + message + optional action button
+
+  Status Badges:
+  - pending: bg-amber-100, text-amber-700
+  - accepted: bg-blue-100, text-blue-700
+  - fulfilled: bg-green-100, text-green-700
+  - cancelled: bg-gray-100, text-gray-700
+
+  Urgency Badges:
+  - critical: text-red-600 (#dc2626)
+  - high: text-orange-600 (#ea580c)
+  - medium: text-yellow-600 (#ca8a04)
+  - low: text-blue-600 (#2563eb)
+
+  Blood Group Colors (map markers):
+  - A+/A-: Blue (#2196F3)
+  - B+/B-: Green (#4CAF50)
+  - AB+/AB-: Purple (#9C27B0)
+  - O+/O-: Orange (#FF9800)
+
+MAP:
+  - Provider: OpenStreetMap via Leaflet
+  - Default center: India [20.5937, 78.9629]
+  - Default zoom: 5 (country view), 11 (when user location detected)
+  - Custom SVG markers for donors (pin with blood group text)
+  - Custom SVG markers for requests (different shape, urgency color)
+  - Popups with donor/request details on click
+
+RESPONSIVE:
+  - Mobile-first approach
+  - Breakpoint: sm (640px+) for tablet/desktop adjustments
+  - Text: clamp() for fluid sizing
+  - Padding/gap: base sm:larger pattern
+  - Icons: w-5 h-5 sm:w-6 sm:h-6
+
+================================================================================
+11. KEY FEATURES SUMMARY
+================================================================================
+
+IMPLEMENTED BACKEND FEATURES:
+1.  User registration & login with JWT cookie auth
+2.  Role-based access control (donor, requester, admin)
+3.  Blood request creation with geospatial location
+4.  Automatic donor matching (blood compatibility + proximity + availability)
+5.  Request acceptance flow (with MongoDB transactions)
+6.  Donation history tracking
+7.  Real-time notifications via Socket.io
+8.  Live location updates
+9.  Direct messaging between users
+10. Donor availability toggle
+11. Admin dashboard statistics
+12. Nearby donor search (geospatial)
+13. Request auto-escalation (expanding search radius)
+14. Donor leaderboard (auto-generated every 5 min)
+15. Live heatmap of donor distribution (every 2 min)
+16. Live analytics dashboard (every 3 min)
+17. Emergency broadcast system (admin only)
+18. Trust rating & review system
+19. Achievement/badge system
+20. Proximity alerts (notify when near a request)
+21. Predictive matching algorithm (scored by distance, trust, experience)
+22. Typing indicators for chat
+23. Notification preferences (quiet hours, sound, vibration)
+24. Blood group compatibility matrix
+
+EXISTING FRONTEND PAGES:
+1.  Login page (email/password)
+2.  Registration page (2-step: basic info + location)
+3.  Home/Dashboard (stats, quick actions, profile summary)
+4.  Blood requests list (with map view toggle, status filters)
+5.  Create blood request form
+6.  Donors list (filterable by blood group, availability)
+7.  Donation history page
+8.  Profile page (view/edit)
+9.  Update availability page
+10. Admin dashboard (stats with charts)
+11. Map view with donor + request markers
+
+FEATURES NOT YET IN FRONTEND (but backend supports):
+- Real-time socket notifications
+- Direct messaging / chat
+- Leaderboard view
+- Heatmap visualization
+- Emergency alerts UI
+- Trust rating / review UI
+- Achievement badges display
+- Notification preferences settings
+- Proximity alerts
+- Typing indicators
+- Live analytics dashboard (for admin)
+- Online users count display
+
+================================================================================
+12. ENVIRONMENT & CONFIG
+================================================================================
+
+BACKEND ENV VARIABLES (.env):
+  NODE_ENV=development          # development | production | test
+  PORT=9000                     # Server port
+  MONGO_URI=mongodb://...       # MongoDB connection string
+  JWT_SECRET=your_secret        # JWT signing secret
+  JWT_ACCESS_EXPIRATION=15m     # Access token TTL
+  JWT_REFRESH_EXPIRATION=7d     # Refresh token TTL
+  CORS_ORIGIN=*                 # Allowed origins (set to frontend URL in prod)
+  LOG_LEVEL=debug               # error | warn | info | debug
+
+FRONTEND:
+  - Vite dev server (default port 5173)
+  - API base URL configured in services/api.ts
+  - Credentials: 'include' on all fetch requests
+
+================================================================================
+END OF DOCUMENTATION
+================================================================================
+
+https://stitch.withgoogle.com/projects/14452485615371051557?pli=1

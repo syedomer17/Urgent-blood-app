@@ -7,10 +7,11 @@ export const updateProfileSchema = Joi.object({
     location: Joi.object({
         latitude: Joi.number().min(-90).max(90),
         longitude: Joi.number().min(-180).max(180),
-        address: Joi.string(),
-        state: Joi.string(),
-        city: Joi.string(),
-        zipCode: Joi.string(),
-        areaName: Joi.string(),
+        address: Joi.string().allow('', null),
+        country: Joi.string().required(),
+        state: Joi.string().required(),
+        city: Joi.string().required(),
+        zipCode: Joi.string().allow('', null),
+        areaName: Joi.string().allow('', null),
     }),
 }).min(1);

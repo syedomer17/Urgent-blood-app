@@ -5,6 +5,7 @@ interface LocationInput {
     latitude?: number;
     longitude?: number;
     address?: string;
+    country?: string;
     state?: string;
     city?: string;
     zipCode?: string;
@@ -15,6 +16,7 @@ interface LocationOutput {
     type: 'Point';
     coordinates: number[]; // [longitude, latitude]
     address?: string;
+    country?: string;
     state?: string;
     city?: string;
     zipCode?: string;
@@ -24,7 +26,7 @@ interface LocationOutput {
 export const processLocation = async (locationData: LocationInput): Promise<LocationOutput | undefined> => {
     if (!locationData) return undefined;
 
-    let { latitude, longitude, address, state, city, zipCode, areaName } = locationData;
+    let { latitude, longitude, address, country, state, city, zipCode, areaName } = locationData;
 
     // 1. If coordinates are provided, use them directly
     if (latitude !== undefined && longitude !== undefined) {
@@ -32,6 +34,7 @@ export const processLocation = async (locationData: LocationInput): Promise<Loca
             type: 'Point',
             coordinates: [longitude, latitude],
             address,
+            country,
             state,
             city,
             zipCode,
@@ -39,29 +42,26 @@ export const processLocation = async (locationData: LocationInput): Promise<Loca
         };
     }
 
-    // 2. If coordinates are missing but address is provided, try geocoding
-    if (address) {
+    // 2. Prioritize structured fields for geocoding
+    const locationString = [city, state, country].filter(Boolean).join(', ');
+
+    if (locationString || address) {
         try {
-            // Lazy load geocoder to avoid circular dependencies or strict startup requirements
             const geocoder = (await import('./geocoder')).default;
-            const loc = await geocoder.geocode(address);
+            const query = locationString || address;
+            const loc = await geocoder.geocode(query!);
 
             if (loc && loc.length > 0 && loc[0].latitude !== undefined && loc[0].longitude !== undefined) {
-                // Extract address components from geocoder response
                 const geoResult = loc[0];
-                
-                // Ensure coordinates are valid numbers
-                const longitude = geoResult.longitude ?? null;
-                const latitude = geoResult.latitude ?? null;
-                
-                if (!longitude || !latitude) {
-                    return undefined;
-                }
-                
+
+                const finalLongitude = geoResult.longitude!;
+                const finalLatitude = geoResult.latitude!;
+
                 return {
                     type: 'Point',
-                    coordinates: [longitude, latitude] as [number, number],
+                    coordinates: [finalLongitude, finalLatitude],
                     address: address || geoResult.formattedAddress,
+                    country: country || geoResult.country || geoResult.countryCode,
                     state: state || geoResult.state || geoResult.administrativeLevels?.level1long,
                     city: city || geoResult.city || geoResult.administrativeLevels?.level2long,
                     zipCode: zipCode || geoResult.zipcode,
@@ -69,13 +69,24 @@ export const processLocation = async (locationData: LocationInput): Promise<Loca
                 };
             }
         } catch (error) {
-            // console.error("Geocoding error:", error);
-            // Optionally: throw new AppError('Geocoding service unavailable', StatusCodes.SERVICE_UNAVAILABLE);
-            // For now, we fall through.
+            // Silence geocoding errors, returning what we can below
         }
     }
 
-    // 3. If neither valid coordinates nor successful geocoding could occur, return undefined
-    // (Or throw error if location is strictly required by the caller)
+    // 3. Fallback: If we have structured data but geocoding failed, return without coordinates 
+    // (though map features won't work for this user until they have coordinates)
+    if (city || state || country) {
+        return {
+            type: 'Point',
+            coordinates: [], // Empty coordinates if geocoding failed
+            address,
+            country,
+            state,
+            city,
+            zipCode,
+            areaName,
+        };
+    }
+
     return undefined;
 };

@@ -11,6 +11,7 @@ export interface IUser extends Document {
         type: 'Point';
         coordinates: number[]; // [longitude, latitude]
         address?: string;
+        country?: string;
         state?: string;
         city?: string;
         zipCode?: string;
@@ -92,6 +93,7 @@ const userSchema = new Schema<IUser>(
                 index: '2dsphere',
             },
             address: String,
+            country: String,
             state: String,
             city: String,
             zipCode: String,
