@@ -13,7 +13,7 @@ export const getDonorsWithLocation = async () => {
 
 /**
  * Returns donors within `radiusMetres` of the given coordinates using
- * MongoDB's $nearSphere / 2dsphere index.
+ * MongoDB's $geoNear aggregation stage (requires 2dsphere index on location).
  */
 export const getDonorsNear = async (
     lat: number,
@@ -30,13 +30,30 @@ export const getDonorsNear = async (
         throw new AppError('Radius must be a positive number up to 500 000 metres (500 km).', StatusCodes.BAD_REQUEST);
     }
 
-    return User.find({
-        role: 'donor',
-        location: {
-            $nearSphere: {
-                $geometry: { type: 'Point', coordinates: [lng, lat] },
-                $maxDistance: radiusMetres,
+    const results = await User.aggregate([
+        {
+            $geoNear: {
+                near: { type: 'Point', coordinates: [lng, lat] },
+                distanceField: 'distanceMetres',
+                maxDistance: radiusMetres,
+                spherical: true,
+                key: 'location',
+                query: { role: 'donor' },
             },
         },
-    }).select('name bloodGroup availability trustRating totalDonations location contactNumber');
+        {
+            $project: {
+                name: 1,
+                bloodGroup: 1,
+                availability: 1,
+                trustRating: 1,
+                totalDonations: 1,
+                location: 1,
+                contactNumber: 1,
+                distanceMetres: 1,
+            },
+        },
+    ]);
+
+    return results;
 };

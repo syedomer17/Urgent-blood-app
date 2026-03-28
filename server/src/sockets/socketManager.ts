@@ -1,5 +1,15 @@
 import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
+
+/** Parse a single cookie value from the raw Cookie header string */
+function extractCookie(cookieHeader: string | undefined, name: string): string | undefined {
+    if (!cookieHeader) return undefined;
+    for (const part of cookieHeader.split(';')) {
+        const [k, ...rest] = part.trim().split('=');
+        if (k.trim() === name) return rest.join('=');
+    }
+    return undefined;
+}
 import { config } from '../config/env';
 import logger from '../config/logger';
 import { User } from '../modules/users/user.model';
@@ -38,9 +48,12 @@ class SocketManager {
             pingTimeout: 60000,
         });
 
-        // Authentication Middleware
+        // Authentication Middleware — accepts token from auth handshake OR accessToken cookie
         this.io.use((socket: Socket, next) => {
-            const token = socket.handshake.auth.token;
+            const token =
+                socket.handshake.auth.token ||
+                extractCookie(socket.handshake.headers.cookie as string | undefined, 'accessToken');
+
             if (!token) {
                 return next(new Error('Authentication error'));
             }
@@ -259,21 +272,26 @@ class SocketManager {
             }
         });
 
-        // Chat/Messaging
+        // Chat/Messaging — persists to DB then broadcasts
         socket.on('send_message', async (data: any) => {
             try {
-                const { recipientId, message, requestId } = data;
-                const sender = await User.findById(userId);
+                const { recipientId, message } = data;
+                const sender = await User.findById(userId).select('name');
 
-                this.io?.to(recipientId).emit('receive_message', {
+                // Persist to MongoDB
+                const { saveMessage } = await import('../modules/chat/chat.service');
+                const saved = await saveMessage(userId, recipientId, message);
+
+                const payload = {
+                    _id: saved._id.toString(),
                     from: userId,
-                    senderName: sender?.name,
+                    senderName: sender?.name ?? 'Unknown',
                     message,
-                    requestId,
-                    timestamp: new Date(),
-                });
+                    timestamp: saved.createdAt,
+                };
 
-                socket.emit('message_sent', { timestamp: new Date() });
+                this.io?.to(recipientId).emit('receive_message', payload);
+                socket.emit('message_sent', payload);
             } catch (error) {
                 logger.error('Message send error:', error);
             }
@@ -286,6 +304,27 @@ class SocketManager {
                 from: userId,
                 isTyping,
             });
+        });
+
+        // Ping a donor — requester alerts a specific donor about their blood request
+        socket.on('ping_donor', async (data: any) => {
+            try {
+                const { donorId, requestId, bloodGroup, patientName, urgency, location } = data;
+                const requester = await User.findById(userId).select('name');
+                this.io?.to(donorId).emit('donor_pinged', {
+                    from: userId,
+                    requesterName: requester?.name ?? 'A requester',
+                    requestId,
+                    bloodGroup,
+                    patientName,
+                    urgency,
+                    location,
+                    timestamp: new Date(),
+                });
+                socket.emit('ping_sent', { donorId, timestamp: new Date() });
+            } catch (error) {
+                logger.error('Ping donor error:', error);
+            }
         });
 
         // Request Priority Level Change

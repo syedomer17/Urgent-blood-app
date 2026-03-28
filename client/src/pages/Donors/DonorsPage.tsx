@@ -1,5 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import toast from "react-hot-toast";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
+
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({ iconUrl: markerIcon, iconRetinaUrl: markerIcon2x, shadowUrl: markerShadow });
+
+const BLOOD_COLORS: Record<string, string> = {
+  "A+": "#ef4444", "A-": "#f97316",
+  "B+": "#8b5cf6", "B-": "#a78bfa",
+  "AB+": "#06b6d4", "AB-": "#0891b2",
+  "O+": "#22c55e", "O-": "#16a34a",
+};
 
 interface Donor {
   _id: string;
@@ -10,15 +26,95 @@ interface Donor {
   totalDonations: number;
   contactNumber?: string;
   location?: {
+    coordinates?: number[]; // [lng, lat]
     address?: string;
     city?: string;
   };
+}
+
+function DonorMap({ donors, selectedDonorId }: { donors: Donor[]; selectedDonorId: string | null }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const markersRef = useRef<Map<string, L.CircleMarker>>(new Map());
+
+  // Init map
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+    const map = L.map(containerRef.current).setView([20.5937, 78.9629], 5);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '© OpenStreetMap',
+      maxZoom: 18,
+    }).addTo(map);
+    mapRef.current = map;
+    return () => { map.remove(); mapRef.current = null; };
+  }, []);
+
+  // Update donor markers
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    markersRef.current.forEach(m => m.remove());
+    markersRef.current.clear();
+    
+    const bounds = L.latLngBounds([]);
+
+    donors.forEach(donor => {
+      const coords = donor.location?.coordinates;
+      if (!coords || coords.length < 2) return;
+      const [lng, lat] = coords;
+      const color = BLOOD_COLORS[donor.bloodGroup] || "#ef4444";
+      const isSelected = donor._id === selectedDonorId;
+
+      const marker = L.circleMarker([lat, lng], {
+        radius: isSelected ? 14 : 10,
+        fillColor: color,
+        color: "#fff",
+        weight: isSelected ? 3 : 2,
+        opacity: 1,
+        fillOpacity: donor.availability ? 0.9 : 0.45,
+      }).addTo(map);
+
+      marker.bindPopup(`
+        <div style="font-family:Inter,sans-serif;min-width:140px">
+          <b>${donor.name}</b><br/>${donor.bloodGroup} | ${donor.location?.city || "Unknown"}
+          <div style="margin-top:8px;padding-top:8px;border-top:1px solid #eee;">
+            <a href="https://www.google.com/maps/search/?api=1&query=${lat},${lng}" target="_blank" rel="noopener noreferrer" style="color:#b71c1c;font-size:12px;font-weight:700;text-decoration:none;display:flex;align-items:center;gap:4px;">
+              🌍 Open in Maps
+            </a>
+          </div>
+        </div>
+      `);
+      marker.on("click", () => {
+        // Just let the popup open, the parent clicks handle centering
+      });
+      markersRef.current.set(donor._id, marker);
+      bounds.extend([lat, lng]);
+    });
+
+    if (bounds.isValid() && !selectedDonorId) {
+      map.fitBounds(bounds, { padding: [30, 30], maxZoom: 12 });
+    }
+  }, [donors, selectedDonorId]);
+
+  // Handle selection pan
+  useEffect(() => {
+    if (!selectedDonorId) return;
+    const marker = markersRef.current.get(selectedDonorId);
+    if (marker) {
+      marker.openPopup();
+      const latlng = marker.getLatLng();
+      mapRef.current?.flyTo(latlng, 13, { animate: true, duration: 0.6 });
+    }
+  }, [selectedDonorId]);
+
+  return <div ref={containerRef} className="w-full rounded-2xl border border-outline-variant/20 z-0 relative" style={{ height: 350 }} />;
 }
 
 const DonorsPage = () => {
   const [donors, setDonors] = useState<Donor[]>([]);
   const [loading, setLoading] = useState(true);
   const [bloodFilter, setBloodFilter] = useState("");
+  const [selectedDonorId, setSelectedDonorId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDonors = async () => {
@@ -90,13 +186,21 @@ const DonorsPage = () => {
           <p className="text-secondary font-medium">No donors found.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filtered.map((donor) => (
-            <div
-              key={donor._id}
-              className="bg-surface-container-lowest rounded-2xl p-6 ring-1 ring-surface-container hover:shadow-lg transition-all flex items-center gap-5"
-            >
-              <div className="w-14 h-14 rounded-2xl bg-primary-fixed flex items-center justify-center shrink-0">
+        <div className="space-y-6">
+          <DonorMap donors={filtered} selectedDonorId={selectedDonorId} />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filtered.map((donor) => {
+              const isSelected = selectedDonorId === donor._id;
+              return (
+                <div
+                  key={donor._id}
+                  onClick={() => setSelectedDonorId(donor._id)}
+                  className={`bg-surface-container-lowest rounded-2xl p-6 transition-all flex items-center gap-5 cursor-pointer ${
+                    isSelected ? "ring-2 ring-primary shadow-lg scale-[1.02]" : "ring-1 ring-surface-container hover:shadow-lg"
+                  }`}
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-primary-fixed flex items-center justify-center shrink-0">
                 <span className="font-headline font-black text-lg text-primary">
                   {donor.bloodGroup}
                 </span>
@@ -134,7 +238,9 @@ const DonorsPage = () => {
                 </div>
               </div>
             </div>
-          ))}
+              );
+            })}
+          </div>
         </div>
       )}
     </main>

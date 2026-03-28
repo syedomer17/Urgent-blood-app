@@ -1,8 +1,39 @@
 import express from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import validate from '../../middlewares/validate';
 import { createRequestSchema } from './requests.validation';
 import * as requestController from './requests.controller';
 import { protect, restrictTo } from '../../middlewares/auth';
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(process.cwd(), 'uploads', 'hospital-docs');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, uploadsDir),
+    filename: (_req, file, cb) => {
+        const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+        const ext = path.extname(file.originalname);
+        cb(null, `hospital-${uniqueSuffix}${ext}`);
+    },
+});
+
+const upload = multer({
+    storage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+    fileFilter: (_req, file, cb) => {
+        const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+        if (allowed.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file type. Only JPG, PNG, WebP, and PDF are allowed.'));
+        }
+    },
+});
 
 const router = express.Router();
 
@@ -72,6 +103,9 @@ router.get('/map-data', requestController.getMapData);
  *         description: Forbidden (Only requesters or admins)
  */
 router.post('/', restrictTo('requester', 'admin'), validate(createRequestSchema), requestController.createRequest);
+
+// POST verify hospital document — upload + AI verification
+router.post('/verify-document', restrictTo('requester', 'admin'), upload.single('document'), requestController.verifyDocument);
 
 /**
  * @swagger

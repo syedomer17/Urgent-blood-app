@@ -25,6 +25,7 @@ import requestRoutes from './modules/requests/requests.routes';
 import donationRoutes from './modules/donations/donations.routes';
 import adminRoutes from './modules/admin/admin.routes';
 import donorRoutes from './modules/donors/donors.routes';
+import chatRoutes from './modules/chat/chat.routes';
 
 const app = express();
 
@@ -66,12 +67,16 @@ app.use('/api', limiter);
 // Swagger Docs
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+// Serve uploaded files
+app.use('/uploads', express.static('uploads'));
+
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/requests', requestRoutes);
 app.use('/api/v1/donations', donationRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/donors', donorRoutes);
+app.use('/api/v1/chat', chatRoutes);
 
 app.get("/", (req: Request, res: Response) => {
     res.status(200).json({ message: 'Server is healthy', timestamp: new Date() });

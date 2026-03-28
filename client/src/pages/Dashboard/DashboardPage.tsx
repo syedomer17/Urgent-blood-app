@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { User, BloodRequest } from "../../types";
+import { canDonateTo } from "../../utils/bloodCompatibility";
 import StatsGrid from "../../components/dashboard/StatsGrid";
 import QuickActions from "../../components/dashboard/QuickActions";
 import RequestCard from "../../components/dashboard/RequestCard";
@@ -38,7 +39,16 @@ const DashboardPage = ({ user, refetch }: DashboardPageProps) => {
     refetch();
   };
 
+  // For donors, show compatible requests first; for others, show all pending
   const pendingRequests = requests.filter((r) => r.status === "pending");
+  const compatibleRequests =
+    user.role === "donor" && user.bloodGroup
+      ? pendingRequests.filter((r) => canDonateTo(user.bloodGroup!, r.bloodGroup))
+      : pendingRequests;
+  const incompatibleRequests =
+    user.role === "donor" && user.bloodGroup
+      ? pendingRequests.filter((r) => !canDonateTo(user.bloodGroup!, r.bloodGroup))
+      : [];
 
   return (
     <main className="max-w-5xl mx-auto px-6 space-y-10">
@@ -106,7 +116,7 @@ const DashboardPage = ({ user, refetch }: DashboardPageProps) => {
             </span>
           </a>
         </div>
-        {pendingRequests.length === 0 ? (
+        {compatibleRequests.length === 0 && incompatibleRequests.length === 0 ? (
           <div className="bg-surface-container-lowest rounded-3xl p-8 text-center">
             <span className="material-symbols-outlined text-4xl text-secondary/40 mb-2">
               check_circle
@@ -116,16 +126,44 @@ const DashboardPage = ({ user, refetch }: DashboardPageProps) => {
             </p>
           </div>
         ) : (
-          <div className="flex overflow-x-auto pb-6 gap-6 scrollbar-hide -mx-6 px-6">
-            {pendingRequests.slice(0, 6).map((req) => (
-              <RequestCard
-                key={req._id}
-                request={req}
-                userRole={user.role}
-                onAccepted={fetchRequests}
-              />
-            ))}
-          </div>
+          <>
+            {compatibleRequests.length > 0 && (
+              <>
+                {user.role === "donor" && user.bloodGroup && (
+                  <p className="text-xs font-bold text-primary uppercase tracking-wider ml-1 mb-2">
+                    Compatible with your blood group ({user.bloodGroup})
+                  </p>
+                )}
+                <div className="flex overflow-x-auto pb-6 gap-6 scrollbar-hide -mx-6 px-6">
+                  {compatibleRequests.slice(0, 6).map((req) => (
+                    <RequestCard
+                      key={req._id}
+                      request={req}
+                      userRole={user.role}
+                      onAccepted={fetchRequests}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+            {incompatibleRequests.length > 0 && (
+              <>
+                <p className="text-xs font-bold text-secondary uppercase tracking-wider ml-1 mb-2 mt-4">
+                  Other requests
+                </p>
+                <div className="flex overflow-x-auto pb-6 gap-6 scrollbar-hide -mx-6 px-6 opacity-60">
+                  {incompatibleRequests.slice(0, 4).map((req) => (
+                    <RequestCard
+                      key={req._id}
+                      request={req}
+                      userRole={user.role}
+                      onAccepted={fetchRequests}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </>
         )}
       </section>
     </main>

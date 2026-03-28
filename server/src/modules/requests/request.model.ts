@@ -1,5 +1,20 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
+export interface IHospitalVerification {
+    fileName: string;
+    filePath: string;
+    mimeType: string;
+    isVerified: boolean;
+    confidence: number;
+    hospitalName?: string;
+    documentType?: string;
+    patientName?: string;
+    bloodGroup?: string;
+    details?: string;
+    flags?: string[];
+    verifiedAt?: Date;
+}
+
 export interface IBloodRequest extends Document {
     requesterid: mongoose.Types.ObjectId;
     patientName: string;
@@ -19,6 +34,7 @@ export interface IBloodRequest extends Document {
     notes?: string;
     status: 'pending' | 'accepted' | 'fulfilled' | 'cancelled';
     searchRadius: number; // in km
+    hospitalVerification?: IHospitalVerification;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -79,6 +95,20 @@ const bloodRequestSchema = new Schema<IBloodRequest>(
         searchRadius: {
             type: Number,
             default: 5, // Initial radius in km
+        },
+        hospitalVerification: {
+            fileName: String,
+            filePath: String,
+            mimeType: String,
+            isVerified: { type: Boolean, default: false },
+            confidence: { type: Number, default: 0 },
+            hospitalName: String,
+            documentType: String,
+            patientName: String,
+            bloodGroup: String,
+            details: String,
+            flags: [String],
+            verifiedAt: Date,
         },
     },
     {

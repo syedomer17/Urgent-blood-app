@@ -27,6 +27,26 @@ export const acceptRequest = async (donorId: string, requestId: string) => {
             throw new AppError('Donor not found', StatusCodes.NOT_FOUND);
         }
 
+        // Blood compatibility check — which donor groups can donate TO this recipient group
+        const COMPATIBLE_DONORS: Record<string, string[]> = {
+            'A+': ['A+', 'A-', 'O+', 'O-'],
+            'A-': ['A-', 'O-'],
+            'B+': ['B+', 'B-', 'O+', 'O-'],
+            'B-': ['B-', 'O-'],
+            'AB+': ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
+            'AB-': ['A-', 'B-', 'AB-', 'O-'],
+            'O+': ['O+', 'O-'],
+            'O-': ['O-'],
+        };
+
+        const compatibleDonorGroups = COMPATIBLE_DONORS[request.bloodGroup] || [];
+        if (donor.bloodGroup && !compatibleDonorGroups.includes(donor.bloodGroup)) {
+            throw new AppError(
+                `Blood group ${donor.bloodGroup} is not compatible with the requested ${request.bloodGroup}`,
+                StatusCodes.BAD_REQUEST
+            );
+        }
+
         // Update request status
         request.status = 'accepted';
         await request.save({ session });

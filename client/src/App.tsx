@@ -4,11 +4,25 @@ import { useAuth } from "./hooks/useAuth";
 import RegisterPage from "./pages/Register";
 import LoginPage from "./pages/Login";
 import DashboardPage from "./pages/Dashboard";
+import AdminDashboardPage from "./pages/AdminDashboard";
+import RequesterDashboardPage from "./pages/RequesterDashboard";
+import DonorsNearMePage from "./pages/RequesterDashboard/DonorsNearMePage";
 import RequestsPage from "./pages/Requests";
 import CreateRequestPage from "./pages/CreateRequest";
 import DonorsPage from "./pages/Donors";
 import ProfilePage from "./pages/Profile";
 import DashboardLayout from "./components/layout/DashboardLayout";
+
+function getHomePath(role: string) {
+  switch (role) {
+    case "admin":
+      return "/admin";
+    case "requester":
+      return "/requester";
+    default:
+      return "/dashboard";
+  }
+}
 
 function App() {
   const { user, loading, logout, refetch } = useAuth();
@@ -22,6 +36,8 @@ function App() {
       </div>
     );
   }
+
+  const homePath = user ? getHomePath(user.role) : "/login";
 
   return (
     <BrowserRouter>
@@ -51,20 +67,57 @@ function App() {
         {/* Public routes */}
         <Route
           path="/login"
-          element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />}
+          element={user ? <Navigate to={homePath} replace /> : <LoginPage />}
         />
         <Route
           path="/register"
-          element={user ? <Navigate to="/dashboard" replace /> : <RegisterPage />}
+          element={
+            user ? <Navigate to={homePath} replace /> : <RegisterPage />
+          }
         />
 
         {/* Protected routes */}
         {user ? (
-          <Route element={<DashboardLayout onLogout={logout} />}>
+          <Route element={<DashboardLayout onLogout={logout} user={user} />}>
+            {/* Role-specific dashboards */}
             <Route
               path="/dashboard"
               element={<DashboardPage user={user} refetch={refetch} />}
             />
+            <Route
+              path="/admin"
+              element={
+                user.role === "admin" ? (
+                  <AdminDashboardPage user={user} />
+                ) : (
+                  <Navigate to={homePath} replace />
+                )
+              }
+            />
+            <Route
+              path="/requester"
+              element={
+                user.role === "requester" ? (
+                  <RequesterDashboardPage user={user} />
+                ) : (
+                  <Navigate to={homePath} replace />
+                )
+              }
+            />
+
+            {/* Requester-only routes */}
+            <Route
+              path="/requester/donors-near-me"
+              element={
+                user.role === "requester" ? (
+                  <DonorsNearMePage user={user} />
+                ) : (
+                  <Navigate to={homePath} replace />
+                )
+              }
+            />
+
+            {/* Shared routes */}
             <Route
               path="/requests"
               element={<RequestsPage user={user} />}
@@ -84,7 +137,9 @@ function App() {
                 />
               }
             />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+
+            {/* Catch-all → send to role-specific home */}
+            <Route path="*" element={<Navigate to={homePath} replace />} />
           </Route>
         ) : (
           <Route path="*" element={<Navigate to="/login" replace />} />

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import type { BloodRequest, User } from "../../types";
+import { canDonateTo } from "../../utils/bloodCompatibility";
 
 interface RequestsPageProps {
   user: User;
@@ -25,6 +26,7 @@ const RequestsPage = ({ user }: RequestsPageProps) => {
   const [loading, setLoading] = useState(true);
   const [bloodFilter, setBloodFilter] = useState("");
   const [urgencyFilter, setUrgencyFilter] = useState("");
+  const [compatibleOnly, setCompatibleOnly] = useState(false);
 
   const fetchRequests = async () => {
     try {
@@ -67,6 +69,9 @@ const RequestsPage = ({ user }: RequestsPageProps) => {
   const filtered = requests.filter((r) => {
     if (bloodFilter && r.bloodGroup !== bloodFilter) return false;
     if (urgencyFilter && r.urgency !== urgencyFilter) return false;
+    if (compatibleOnly && user.role === "donor" && user.bloodGroup) {
+      if (!canDonateTo(user.bloodGroup, r.bloodGroup)) return false;
+    }
     return true;
   });
 
@@ -117,6 +122,18 @@ const RequestsPage = ({ user }: RequestsPageProps) => {
             expand_more
           </span>
         </div>
+        {user.role === "donor" && user.bloodGroup && (
+          <button
+            onClick={() => setCompatibleOnly(!compatibleOnly)}
+            className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
+              compatibleOnly
+                ? "bg-primary text-white"
+                : "bg-surface-container-lowest ring-1 ring-outline-variant/20 text-secondary"
+            }`}
+          >
+            {compatibleOnly ? `Compatible (${user.bloodGroup})` : "Show Compatible"}
+          </button>
+        )}
       </div>
 
       {/* Requests List */}
@@ -138,6 +155,10 @@ const RequestsPage = ({ user }: RequestsPageProps) => {
           {filtered.map((req) => {
             const style = urgencyStyles[req.urgency] ?? urgencyStyles.low;
             const bgColor = bloodGroupBg[req.urgency] ?? "bg-surface-container-high";
+            const isCompatible =
+              user.role === "donor" && user.bloodGroup
+                ? canDonateTo(user.bloodGroup, req.bloodGroup)
+                : false;
 
             return (
               <div
@@ -165,6 +186,11 @@ const RequestsPage = ({ user }: RequestsPageProps) => {
                         >
                           {req.urgency}
                         </span>
+                        {isCompatible && (
+                          <span className="px-2 py-0.5 rounded-full bg-green-100 text-[10px] font-black uppercase tracking-wider text-green-700 ring-1 ring-green-200">
+                            Compatible
+                          </span>
+                        )}
                       </div>
                       {req.location?.address && (
                         <p className="text-sm text-secondary flex items-center gap-1.5">

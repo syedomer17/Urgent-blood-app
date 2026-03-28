@@ -87,10 +87,10 @@ const userSchema = new Schema<IUser>(
             type: {
                 type: String,
                 enum: ['Point'],
+                default: 'Point',
             },
             coordinates: {
-                type: [Number],
-                index: '2dsphere',
+                type: [Number], // [longitude, latitude]
             },
             address: String,
             country: String,
@@ -169,5 +169,6 @@ userSchema.index({ email: 1 }, { unique: true });
 userSchema.index({ role: 1 });
 userSchema.index({ bloodGroup: 1 });
 userSchema.index({ bloodGroup: 1, role: 1 }); // Compound index
+userSchema.index({ location: '2dsphere' }); // Geospatial index for $nearSphere queries
 
 export const User = mongoose.model<IUser>('User', userSchema);

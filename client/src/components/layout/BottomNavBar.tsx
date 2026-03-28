@@ -1,27 +1,47 @@
 import { Link, useLocation } from "react-router-dom";
+import type { User } from "../../types";
 
 interface NavItem {
   path: string;
   icon: string;
-  filledIcon?: string;
   label: string;
 }
 
-const navItems: NavItem[] = [
-  { path: "/dashboard", icon: "home_health", label: "Home" },
-  { path: "/requests", icon: "bloodtype", label: "Requests" },
-  { path: "/donors", icon: "group", label: "Donors" },
-  { path: "/profile", icon: "person", label: "Profile" },
-];
+function getNavItems(role: string): NavItem[] {
+  const homePath =
+    role === "admin" ? "/admin" : role === "requester" ? "/requester" : "/dashboard";
 
-const BottomNavBar = () => {
+  if (role === "requester") {
+    return [
+      { path: homePath, icon: "home_health", label: "Home" },
+      { path: "/donors", icon: "group", label: "Donors" },
+      { path: "/requester/donors-near-me", icon: "person_search", label: "Near Me" },
+
+      { path: "/profile", icon: "person", label: "Profile" },
+    ];
+  }
+
+  return [
+    { path: homePath, icon: "home_health", label: "Home" },
+    { path: "/requests", icon: "bloodtype", label: "Requests" },
+    { path: "/donors", icon: "group", label: "Donors" },
+    { path: "/profile", icon: "person", label: "Profile" },
+  ];
+}
+
+interface BottomNavBarProps {
+  user: User;
+}
+
+const BottomNavBar = ({ user }: BottomNavBarProps) => {
   const location = useLocation();
+  const navItems = getNavItems(user.role);
 
   return (
     <nav className="fixed bottom-0 w-full z-50 rounded-t-3xl border-t border-gray-100 bg-white/80 backdrop-blur-xl shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
       <div className="flex justify-around items-center px-4 pt-3 pb-6 w-full">
         {navItems.map((item) => {
-          const isActive = location.pathname.startsWith(item.path);
+          const isActive = location.pathname === item.path;
           return (
             <Link
               key={item.path}
