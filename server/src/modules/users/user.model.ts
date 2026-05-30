@@ -47,6 +47,24 @@ export interface IUser extends Document {
     avatar?: string;
     isOnline?: boolean;
     lastActivity?: Date;
+    // Verification fields for admin review
+    verification?: {
+        status?: 'pending' | 'approved' | 'rejected';
+        documents?: Array<{
+            filename?: string;
+            path?: string;
+            mimeType?: string;
+            uploadedAt?: Date;
+        }>;
+        // AI suggestion metadata
+        aiSuggestedVerified?: boolean;
+        aiConfidence?: number;
+        aiDetails?: string;
+        reviewedBy?: string;
+        reviewedAt?: Date;
+        rejectionReason?: string;
+    };
+    isVerified?: boolean;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -158,6 +176,42 @@ const userSchema = new Schema<IUser>(
             default: false,
         },
         lastActivity: Date,
+            // Verification subdocument for admin review
+            verification: {
+                status: {
+                    type: String,
+                    enum: ['pending', 'approved', 'rejected'],
+                    default: 'pending',
+                },
+                documents: [
+                    {
+                        filename: String,
+                        path: String,
+                        mimeType: String,
+                        uploadedAt: Date,
+                    },
+                ],
+                // AI suggestion metadata
+                aiSuggestedVerified: {
+                    type: Boolean,
+                    default: false,
+                },
+                aiConfidence: {
+                    type: Number,
+                    default: 0,
+                },
+                aiDetails: String,
+                reviewedBy: {
+                    type: Schema.Types.ObjectId,
+                    ref: 'User',
+                },
+                reviewedAt: Date,
+                rejectionReason: String,
+            },
+            isVerified: {
+                type: Boolean,
+                default: false,
+            },
     },
     {
         timestamps: true,

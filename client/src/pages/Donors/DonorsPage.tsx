@@ -114,6 +114,7 @@ const DonorsPage = () => {
   const [donors, setDonors] = useState<Donor[]>([]);
   const [loading, setLoading] = useState(true);
   const [bloodFilter, setBloodFilter] = useState("");
+  const [cityFilter, setCityFilter] = useState("");
   const [selectedDonorId, setSelectedDonorId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -132,6 +133,28 @@ const DonorsPage = () => {
     };
     fetchDonors();
   }, []);
+
+  const searchByCity = async () => {
+    if (!cityFilter.trim()) {
+      toast.error('Enter a city name to search');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/v1/donors/search?city=${encodeURIComponent(cityFilter)}&radius=20000`, { credentials: 'include' });
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.message || 'City search failed');
+        return;
+      }
+      const data = await res.json();
+      setDonors(data.data ?? []);
+    } catch {
+      toast.error('Network error during city search');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filtered = donors.filter((d) => {
     if (bloodFilter && d.bloodGroup !== bloodFilter) return false;
@@ -153,7 +176,7 @@ const DonorsPage = () => {
       </div>
 
       {/* Filter */}
-      <div className="flex flex-wrap gap-3 mb-10">
+      <div className="flex flex-wrap gap-3 mb-10 items-center">
         <div className="relative">
           <select
             value={bloodFilter}
@@ -168,6 +191,18 @@ const DonorsPage = () => {
           <span className="material-symbols-outlined absolute right-3 top-2.5 text-secondary pointer-events-none text-lg">
             expand_more
           </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="City (e.g. Mumbai)"
+            value={cityFilter}
+            onChange={(e) => setCityFilter(e.target.value)}
+            className="bg-surface-container-lowest ring-1 ring-outline-variant/20 rounded-xl px-4 py-2.5 text-sm focus:ring-primary/50 focus:ring-2 transition-all outline-none"
+          />
+          <button onClick={searchByCity} className="bg-primary text-white px-4 py-2 rounded-xl font-bold">Search</button>
+          <button onClick={() => { setCityFilter(''); /* reload all donors */ setLoading(true); fetch('/api/v1/donors', { credentials: 'include' }).then(async res => { if (res.ok) { const data = await res.json(); setDonors(data.data?.donors ?? data.data ?? []); } }).catch(()=>toast.error('Failed to reload')).finally(()=>setLoading(false)); }} className="bg-surface-container-highest px-4 py-2 rounded-xl">Reset</button>
         </div>
       </div>
 

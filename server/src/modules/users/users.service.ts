@@ -45,6 +45,6 @@ export const getDonors = async () => {
     return await User.find({
         role: 'donor',
         'location.coordinates': { $exists: true, $ne: [] },
-    }).select('name bloodGroup availability trustRating totalDonations location contactNumber');
+    }).select('name bloodGroup availability trustRating totalDonations location contactNumber').lean();
 };
 

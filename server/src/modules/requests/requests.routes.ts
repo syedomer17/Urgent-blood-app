@@ -142,6 +142,7 @@ router.get('/my-requests', restrictTo('requester'), requestController.getMyReque
  *       404:
  *         description: Request not found
  */
+router.get('/:id/matches', requestController.getMatchingDonors);
 router.get('/:id', requestController.getRequest);
 
 export default router;

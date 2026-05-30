@@ -3,6 +3,13 @@ export interface User {
   name: string;
   email: string;
   role: "donor" | "requester" | "admin";
+  verification?: {
+    documents?: Array<{ filename?: string; path?: string }>;
+    aiSuggestedVerified?: boolean;
+    aiConfidence?: number;
+    aiDetails?: string;
+    aiAutoApproved?: boolean;
+  };
   bloodGroup?: string;
   contactNumber?: string;
   availability?: boolean;
@@ -39,6 +46,8 @@ export interface BloodRequest {
   unitsRequired: number;
   urgency: "low" | "medium" | "high" | "critical";
   location: Location;
+  hospitalName?: string;
+  requiredDate?: string;
   contactNumber: string;
   notes?: string;
   status: "pending" | "accepted" | "fulfilled" | "cancelled";

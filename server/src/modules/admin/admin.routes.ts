@@ -27,5 +27,8 @@ router.use(restrictTo('admin'));
  *         description: Stats retrieved successfully
  */
 router.get('/stats', adminController.getDashboardStats);
+router.get('/verifications', adminController.getPendingVerifications);
+router.patch('/verifications/:id/approve', adminController.approveVerification);
+router.patch('/verifications/:id/reject', adminController.rejectVerification);
 
 export default router;

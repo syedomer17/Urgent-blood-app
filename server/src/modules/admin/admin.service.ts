@@ -49,3 +49,58 @@ export const getDashboardStats = async () => {
         averageResponseTimeMinutes: avgResponseTime.length > 0 ? (avgResponseTime[0].avgTime / 60000).toFixed(2) : 0,
     };
 };
+
+export const getPendingVerifications = async () => {
+    const users = await User.find({ 'verification.status': 'pending' }).select('name email role contactNumber verification isVerified createdAt');
+    return users;
+};
+
+export const approveUserVerification = async (userId: string, adminId: string) => {
+    const user = await User.findById(userId);
+    if (!user) throw new Error('User not found');
+    if (!user.verification) {
+        user.verification = {
+            documents: [],
+            status: 'approved',
+            aiSuggestedVerified: false,
+            aiConfidence: 0,
+            aiDetails: null,
+            aiAutoApproved: false,
+            reviewedBy: adminId as any,
+            reviewedAt: new Date(),
+        } as any;
+    } else {
+        user.verification.status = 'approved';
+        user.verification.reviewedBy = adminId as any;
+        user.verification.reviewedAt = new Date();
+    }
+    user.isVerified = true;
+    await user.save();
+    return user;
+};
+
+export const rejectUserVerification = async (userId: string, reason: string, adminId: string) => {
+    const user = await User.findById(userId);
+    if (!user) throw new Error('User not found');
+    if (!user.verification) {
+        user.verification = {
+            documents: [],
+            status: 'rejected',
+            aiSuggestedVerified: false,
+            aiConfidence: 0,
+            aiDetails: null,
+            aiAutoApproved: false,
+            rejectionReason: reason,
+            reviewedBy: adminId as any,
+            reviewedAt: new Date(),
+        } as any;
+    } else {
+        user.verification.status = 'rejected';
+        user.verification.rejectionReason = reason;
+        user.verification.reviewedBy = adminId as any;
+        user.verification.reviewedAt = new Date();
+    }
+    user.isVerified = false;
+    await user.save();
+    return user;
+};

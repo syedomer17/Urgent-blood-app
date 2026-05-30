@@ -19,8 +19,12 @@ export const getAllUsers = catchAsync(async (_req: Request, res: Response) => {
     sendResponse(res, StatusCodes.OK, true, 'Users retrieved successfully', users);
 });
 
-export const getDonors = catchAsync(async (_req: Request, res: Response) => {
+export const getDonors = catchAsync(async (req: Request, res: Response) => {
     const donors = await userService.getDonors();
+    const callerRole = (req.user && (req.user as any).role) || 'anonymous';
+    if (!['requester', 'admin'].includes(callerRole)) {
+        donors.forEach((d: any) => { if (d && d.contactNumber) delete d.contactNumber; });
+    }
     sendResponse(res, StatusCodes.OK, true, 'Donors retrieved successfully', donors);
 });
 

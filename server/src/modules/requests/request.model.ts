@@ -18,6 +18,8 @@ export interface IHospitalVerification {
 export interface IBloodRequest extends Document {
     requesterid: mongoose.Types.ObjectId;
     patientName: string;
+    hospitalName: string;
+    requiredDate: Date;
     bloodGroup: 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-';
     unitsRequired: number;
     urgency: 'low' | 'medium' | 'high' | 'critical';
@@ -50,6 +52,15 @@ const bloodRequestSchema = new Schema<IBloodRequest>(
             type: String,
             required: true,
             trim: true,
+        },
+        hospitalName: {
+            type: String,
+            required: true,
+            trim: true,
+        },
+        requiredDate: {
+            type: Date,
+            required: true,
         },
         bloodGroup: {
             type: String,

@@ -68,4 +68,7 @@ router.get('/', protect, donorsController.getAllDonors);
  */
 router.get('/near', protect, nearLimiter, donorsController.getNearbyDonors);
 
+// Search donors by city name (geocoded on server)
+router.get('/search', protect, nearLimiter, donorsController.searchDonorsByCity);
+
 export default router;

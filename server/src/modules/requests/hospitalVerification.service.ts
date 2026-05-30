@@ -1,9 +1,9 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import fs from 'fs';
 import path from 'path';
+import { config } from '../../config/env';
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyCoILg1lxf6ZV333hF5WPYWLowz8XMN9og';
-
+const GEMINI_API_KEY = String(config.gemini.apiKey || process.env.GEMINI_API_KEY || '');
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 export interface VerificationResult {

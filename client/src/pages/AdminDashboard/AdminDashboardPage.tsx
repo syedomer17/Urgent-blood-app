@@ -235,6 +235,13 @@ const AdminDashboardPage = ({ user }: AdminDashboardPageProps) => {
           All Donors
         </button>
         <button
+          onClick={() => navigate('/admin/verifications')}
+          className="bg-surface-container-highest text-primary rounded-xl py-4 px-6 font-bold flex items-center justify-center gap-3 active:scale-95 transition-transform"
+        >
+          <span className="material-symbols-outlined">fact_check</span>
+          Pending Verifications
+        </button>
+        <button
           onClick={() => navigate("/create-request")}
           className="bg-surface-container-lowest border border-outline-variant/20 text-on-surface rounded-xl py-4 px-6 font-bold flex items-center justify-center gap-3 active:scale-95 transition-transform"
         >

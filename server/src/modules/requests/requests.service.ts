@@ -172,6 +172,52 @@ export const getAllRequests = async () => {
         .sort({ createdAt: -1 });
 };
 
+export const getMatchingDonors = async (requestId: string) => {
+    const request = await BloodRequest.findById(requestId);
+    if (!request) throw new AppError('Request not found', StatusCodes.NOT_FOUND);
+
+    const compatibleGroups = getCompatibleDonorGroups(request.bloodGroup);
+    const coords = request.location?.coordinates;
+    if (!coords || coords.length < 2) {
+        throw new AppError('Request has no location data', StatusCodes.BAD_REQUEST);
+    }
+
+    const maxDistanceMetres = (request.searchRadius || 25) * 1000;
+
+    const donors = await User.aggregate([
+        {
+            $geoNear: {
+                near: { type: 'Point', coordinates: coords as [number, number] },
+                distanceField: 'distanceMetres',
+                maxDistance: maxDistanceMetres,
+                spherical: true,
+                key: 'location',
+                query: {
+                    role: 'donor',
+                    bloodGroup: { $in: compatibleGroups },
+                },
+            },
+        },
+        {
+            $project: {
+                name: 1,
+                bloodGroup: 1,
+                availability: 1,
+                trustRating: 1,
+                totalDonations: 1,
+                lastDonationDate: 1,
+                location: 1,
+                contactNumber: 1,
+                distanceMetres: 1,
+                isOnline: 1,
+                lastActivity: 1,
+            },
+        },
+    ]);
+
+    return donors;
+};
+
 export const getMapData = async () => {
     return await BloodRequest.find({
         status: 'pending',

@@ -5,8 +5,20 @@ import * as requestService from './requests.service';
 import { verifyHospitalDocument } from './hospitalVerification.service';
 import { StatusCodes } from 'http-status-codes';
 import fs from 'fs';
+import { User } from '../users/user.model';
+import { config } from '../../config/env';
 
 export const createRequest = catchAsync(async (req: Request, res: Response) => {
+    // If request references a hospital name, require the creator to be a verified hospital (requester) or admin
+    const hospitalName = req.body?.hospitalName;
+    if (hospitalName) {
+        const user = req.user as any;
+        const isAdmin = user?.role === 'admin';
+        const isRequesterVerified = user?.role === 'requester' && Boolean(user?.isVerified);
+        if (!isAdmin && !isRequesterVerified) {
+            return res.status(StatusCodes.FORBIDDEN).json({ success: false, message: 'Only verified hospitals or admins can create requests mentioning a hospital.' });
+        }
+    }
     const request = await requestService.createRequest(req.user!._id.toString(), req.body);
     sendResponse(res, StatusCodes.CREATED, true, 'Blood request created successfully', request);
 });
@@ -64,6 +76,46 @@ export const verifyDocument = catchAsync(async (req: Request, res: Response) => 
     try {
         const result = await verifyHospitalDocument(req.file.path);
 
+        // Persist uploaded file metadata into the user's verification.documents
+        try {
+            if (req.user && (req.user as any)._id) {
+                const fileDoc = {
+                    filename: req.file.originalname,
+                    path: req.file.path,
+                    mimeType: req.file.mimetype,
+                    uploadedAt: new Date(),
+                };
+
+                // Store AI suggestion but keep status as 'pending' for admin review
+                // Determine if we should auto-approve based on config threshold
+                const threshold = Number(config.ai.autoApproveConfidence || 0.8);
+                const shouldAutoApprove = Boolean(result.isVerified) && Number(result.confidence || 0) >= threshold;
+
+                const update: any = {
+                    $push: { 'verification.documents': fileDoc },
+                    $set: {
+                        'verification.aiSuggestedVerified': Boolean(result.isVerified),
+                        'verification.aiConfidence': Number(result.confidence || 0),
+                        'verification.aiDetails': result.details || '',
+                    },
+                };
+
+                if (shouldAutoApprove) {
+                    update.$set['verification.status'] = 'approved';
+                    update.$set['verification.aiAutoApproved'] = true;
+                    update.$set['isVerified'] = true;
+                    update.$set['verification.reviewedAt'] = new Date();
+                } else {
+                    update.$set['verification.status'] = 'pending';
+                }
+
+                await User.findByIdAndUpdate((req.user as any)._id, update).exec();
+            }
+        } catch (e) {
+            // log but don't fail the whole request — admin can still review via record
+            console.error('Failed to persist verification document info:', (e as any)?.message || e);
+        }
+
         sendResponse(res, StatusCodes.OK, true, 'Document verification complete', {
             verification: result,
             file: {
@@ -80,5 +132,14 @@ export const verifyDocument = catchAsync(async (req: Request, res: Response) => 
         }
         throw error;
     }
+});
+
+export const getMatchingDonors = catchAsync(async (req: Request, res: Response) => {
+    const donors = await requestService.getMatchingDonors(req.params.id as string);
+    const callerRole = (req.user && (req.user as any).role) || 'anonymous';
+    if (!['requester', 'admin'].includes(callerRole)) {
+        donors.forEach((d: any) => { if (d && d.contactNumber) delete d.contactNumber; });
+    }
+    sendResponse(res, StatusCodes.OK, true, 'Matching donors retrieved', donors);
 });
 

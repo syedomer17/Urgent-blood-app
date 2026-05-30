@@ -8,7 +8,7 @@ export const getDonorsWithLocation = async () => {
         role: 'donor',
         'location.type': 'Point',
         'location.coordinates': { $exists: true, $not: { $size: 0 } },
-    }).select('name bloodGroup availability trustRating totalDonations location contactNumber');
+    }).select('name bloodGroup availability trustRating totalDonations location contactNumber').lean();
 };
 
 /**

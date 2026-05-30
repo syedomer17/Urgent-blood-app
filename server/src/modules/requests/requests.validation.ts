@@ -2,6 +2,8 @@ import Joi from 'joi';
 
 export const createRequestSchema = Joi.object({
     patientName: Joi.string().required().trim(),
+    hospitalName: Joi.string().required(),
+    requiredDate: Joi.date().iso().required(),
     bloodGroup: Joi.string().valid('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-').required(),
     unitsRequired: Joi.number().min(1).required(),
     urgency: Joi.string().valid('low', 'medium', 'high', 'critical').required(),

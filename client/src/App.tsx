@@ -5,11 +5,13 @@ import RegisterPage from "./pages/Register";
 import LoginPage from "./pages/Login";
 import DashboardPage from "./pages/Dashboard";
 import AdminDashboardPage from "./pages/AdminDashboard";
+import VerificationsPage from "./pages/AdminDashboard/VerificationsPage";
 import RequesterDashboardPage from "./pages/RequesterDashboard";
 import DonorsNearMePage from "./pages/RequesterDashboard/DonorsNearMePage";
 import RequestsPage from "./pages/Requests";
 import CreateRequestPage from "./pages/CreateRequest";
 import DonorsPage from "./pages/Donors";
+import ErrorBoundary from "./components/ErrorBoundary";
 import ProfilePage from "./pages/Profile";
 import DashboardLayout from "./components/layout/DashboardLayout";
 
@@ -95,6 +97,16 @@ function App() {
               }
             />
             <Route
+              path="/admin/verifications"
+              element={
+                user.role === "admin" ? (
+                  <VerificationsPage />
+                ) : (
+                  <Navigate to={homePath} replace />
+                )
+              }
+            />
+            <Route
               path="/requester"
               element={
                 user.role === "requester" ? (
@@ -120,7 +132,11 @@ function App() {
             {/* Shared routes */}
             <Route
               path="/requests"
-              element={<RequestsPage user={user} />}
+              element={
+                <ErrorBoundary>
+                  <RequestsPage user={user} />
+                </ErrorBoundary>
+              }
             />
             <Route
               path="/create-request"

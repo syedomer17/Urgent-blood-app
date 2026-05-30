@@ -218,6 +218,32 @@ This document outlines the available API endpoints for the LifeLink Backend.
 
 ## Donations (`/api/v1/donations`)
 
+## Donors (`/api/v1/donors`)
+
+### Get All Donors
+**GET** `/`
+*Headers: `Authorization: Bearer <access_token>`*
+
+Returns an array of donors with location and basic profile data. Sensitive contact information is restricted: the `contactNumber` field is only included when the authenticated caller has the role `requester` (hospital) or `admin`. Callers with other roles (for example `donor`) will receive donor objects with `contactNumber` omitted.
+
+Example (for `requester`/`admin`):
+```json
+{
+  "success": true,
+  "message": "Donors retrieved successfully",
+  "data": [
+    { "_id": "..", "name": "Alice", "bloodGroup": "A+", "contactNumber": "+123...", "location": { /* ... */ } }
+  ]
+}
+```
+
+### Get Nearby Donors
+**GET** `/near?lat=&lng=&radius=`
+*Headers: `Authorization: Bearer <access_token>`*
+
+Returns donors within the specified radius (in metres). The same `contactNumber` access rule applies: only `requester` and `admin` receive phone numbers in the response.
+
+
 ### 10. Accept Donation Request
 **POST** `/accept`
 *Headers: `Authorization: Bearer <access_token>`*

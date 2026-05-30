@@ -17,7 +17,7 @@ function getOrCreateSocket(): Socket {
 }
 
 export function useSocket() {
-  const [connected, setConnected] = useState(false);
+  const [connected, setConnected] = useState(() => globalSocket?.connected ?? false);
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {

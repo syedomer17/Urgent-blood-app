@@ -6,6 +6,7 @@ import { Notification } from '../notifications/notification.model';
 import { socketManager } from '../../sockets/socketManager';
 import { AppError } from '../../utils/appError';
 import { StatusCodes } from 'http-status-codes';
+import { emailDonorAccepted } from '../../utils/emailService';
 
 export const acceptRequest = async (donorId: string, requestId: string) => {
     const session = await mongoose.startSession();
@@ -105,6 +106,21 @@ export const acceptRequest = async (donorId: string, requestId: string) => {
             'request_accepted',
             { requestId: request._id }
         );
+
+        // Send email notification to requester
+        const requesterObj = request.requesterid as any;
+        const donor = await User.findById(donorId);
+        if (requesterObj?.email && donor) {
+            emailDonorAccepted(
+                requesterObj.email,
+                requesterObj.name ?? 'Requester',
+                donor.name,
+                donor.bloodGroup ?? 'Unknown',
+                donor.contactNumber ?? '',
+                request.patientName,
+                request.bloodGroup,
+            ).catch(() => {}); // fire-and-forget
+        }
     }
 
     return { success: true };

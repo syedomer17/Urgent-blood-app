@@ -3,6 +3,7 @@ import { Notification } from '../modules/notifications/notification.model';
 import { User } from '../modules/users/user.model';
 import { BloodRequest } from '../modules/requests/request.model';
 import logger from '../config/logger';
+import { emailNewDonorNearby, emailRequestStatusUpdate } from '../utils/emailService';
 
 /**
  * Live Notification Service
@@ -63,14 +64,26 @@ export class LiveNotificationService {
                     relatedEntityId: donor._id,
                 });
 
+                const distKm = this.calculateDistance(donor.location.coordinates, request.location.coordinates);
                 socketManager.emitToUser(requester._id.toString(), 'nearby_donor_online', {
                     donor: {
                         id: donor._id,
                         name: donor.name,
                         bloodGroup: donor.bloodGroup,
                     },
-                    distance: this.calculateDistance(donor.location.coordinates, request.location.coordinates),
+                    distance: distKm,
                 });
+
+                // Email the requester
+                if (requester.email) {
+                    emailNewDonorNearby(
+                        requester.email,
+                        requester.name,
+                        donor.name,
+                        donor.bloodGroup ?? 'Unknown',
+                        distKm,
+                    ).catch(() => {});
+                }
             }
         } catch (error) {
             logger.error('Error notifying requesters:', error);
@@ -128,6 +141,18 @@ export class LiveNotificationService {
                 title,
                 message,
             });
+
+            // Email the requester about status change
+            if (requester?.email) {
+                emailRequestStatusUpdate(
+                    requester.email,
+                    requester.name,
+                    request.patientName,
+                    request.bloodGroup,
+                    newStatus,
+                    donor?.name,
+                ).catch(() => {});
+            }
 
             logger.info(`✅ Notified requester about status change: ${newStatus}`);
         } catch (error) {
