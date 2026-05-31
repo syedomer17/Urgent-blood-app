@@ -4,3 +4,4 @@ export { default as BloodGroupSelect } from "./BloodGroupSelect";
 export { default as RoleToggle } from "./RoleToggle";
 export { default as LocationInput } from "./LocationInput";
 export { default as StepIndicator } from "./StepIndicator";
+export { default as HospitalFields } from "./HospitalFields";

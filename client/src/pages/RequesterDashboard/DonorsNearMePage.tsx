@@ -21,6 +21,7 @@ interface Donor {
   availability: boolean;
   trustRating: number;
   totalDonations: number;
+  lastDonationDate?: string;
   contactNumber?: string;
   location?: {
     coordinates?: number[]; // [lng, lat]
@@ -70,6 +71,12 @@ const BLOOD_COLORS: Record<string, string> = {
 };
 
 const RADIUS_OPTIONS = [5, 10, 25, 50];
+const DONATION_FILTERS = ["all", "eligible", "cooldown"] as const;
+
+function daysSince(dateStr?: string): number {
+  if (!dateStr) return 9999;
+  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+}
 
 // ─── DonorMap (Leaflet, vanilla) ─────────────────────────────────────────────
 
@@ -356,7 +363,7 @@ function DonorCard({ donor, selected, onSelect, onChat, onPing, pingLoading, vie
       </div>
 
       {/* One-Tap Contact (only visible to hospitals/requesters and admins) */}
-      {['requester', 'admin'].includes((viewerRole || '').toString()) && donor.contactNumber && (
+      {['requester', 'admin', 'hospital'].includes((viewerRole || '').toString()) && donor.contactNumber && (
         <div className="flex gap-2 mt-2">
           <a
             href={`tel:${donor.contactNumber}`}
@@ -413,6 +420,7 @@ const DonorsNearMePage = ({ user }: Props) => {
   const [sortBy, setSortBy] = useState<"distance" | "rating" | "availability">("distance");
   const [bloodFilter, setBloodFilter] = useState<string>("all");
   const [availableOnly, setAvailableOnly] = useState(false);
+  const [donationFilter, setDonationFilter] = useState<(typeof DONATION_FILTERS)[number]>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [chatDonor, setChatDonor] = useState<Donor | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
@@ -591,6 +599,9 @@ const DonorsNearMePage = ({ user }: Props) => {
     .filter((d) => {
       if (bloodFilter !== "all" && d.bloodGroup !== bloodFilter) return false;
       if (availableOnly && !d.availability) return false;
+      const donatedDaysAgo = daysSince(d.lastDonationDate);
+      if (donationFilter === "eligible" && donatedDaysAgo < 90) return false;
+      if (donationFilter === "cooldown" && donatedDaysAgo >= 90) return false;
       return true;
     })
     .sort((a, b) => {
@@ -742,6 +753,16 @@ const DonorsNearMePage = ({ user }: Props) => {
                   />
                   Available only
                 </button>
+
+                <select
+                  value={donationFilter}
+                  onChange={(e) => setDonationFilter(e.target.value as typeof donationFilter)}
+                  className="bg-surface-container-low border-none rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-primary/30 transition-all"
+                >
+                  <option value="all">All Donations</option>
+                  <option value="eligible">90+ days since donation</option>
+                  <option value="cooldown">Under 90 days</option>
+                </select>
 
                 {/* Sort */}
                 <select

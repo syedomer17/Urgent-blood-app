@@ -44,6 +44,10 @@ export const protect = catchAsync(async (req: Request, res: Response, next: Next
             return next(new AppError('The user belonging to this token does no longer exist.', StatusCodes.UNAUTHORIZED));
         }
 
+        if ((currentUser as any).accountStatus === 'blocked' || (currentUser as any).accountStatus === 'suspended') {
+            return next(new AppError('Your account is temporarily unavailable. Please contact an administrator.', StatusCodes.FORBIDDEN));
+        }
+
         req.user = currentUser;
         next();
     } catch (error: any) {

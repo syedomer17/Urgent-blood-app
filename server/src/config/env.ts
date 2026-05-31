@@ -7,7 +7,7 @@ const envSchema = Joi.object({
     NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
     PORT: Joi.number().default(9000),
     MONGO_URI: Joi.string().required().description('MongoDB Connection URL'),
-    GEMINI_API_KEY: Joi.string().default('').description('Google Gemini API key for document verification'),
+    GEMINI_API_KEY: Joi.string().allow('').default('').description('Google Gemini API key for document verification'),
     JWT_SECRET: Joi.string().required().description('JWT Secret Key'),
     JWT_ACCESS_EXPIRATION: Joi.string().default('15m').description('JWT Access Token Expiration'),
     JWT_REFRESH_EXPIRATION: Joi.string().default('7d').description('JWT Refresh Token Expiration'),

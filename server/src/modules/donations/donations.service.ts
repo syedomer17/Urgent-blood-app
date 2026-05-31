@@ -125,3 +125,82 @@ export const acceptRequest = async (donorId: string, requestId: string) => {
 
     return { success: true };
 };
+
+export const getDonationHistory = async (donorId: string) => {
+    return DonationHistory.find({ donorId, status: 'completed' })
+        .populate('requestId')
+        .sort({ donationDate: -1 })
+        .lean();
+};
+
+export const getLeaderboard = async (limit = 10) => {
+    const leaderboard = await DonationHistory.aggregate([
+        {
+            $match: {
+                status: 'completed',
+            },
+        },
+        {
+            $group: {
+                _id: '$donorId',
+                totalUnits: { $sum: '$unitsDonated' },
+                completedDonations: { $sum: 1 },
+                lastDonationDate: { $max: '$donationDate' },
+            },
+        },
+        {
+            $lookup: {
+                from: 'users',
+                localField: '_id',
+                foreignField: '_id',
+                as: 'donor',
+            },
+        },
+        {
+            $unwind: '$donor',
+        },
+        {
+            $match: {
+                'donor.role': 'donor',
+            },
+        },
+        {
+            $sort: {
+                totalUnits: -1,
+                completedDonations: -1,
+                'donor.trustRating': -1,
+            },
+        },
+        {
+            $limit: limit,
+        },
+        {
+            $project: {
+                donorId: '$_id',
+                name: '$donor.name',
+                bloodGroup: '$donor.bloodGroup',
+                availability: '$donor.availability',
+                trustRating: '$donor.trustRating',
+                totalDonations: '$donor.totalDonations',
+                achievements: '$donor.achievements',
+                totalUnits: 1,
+                completedDonations: 1,
+                lastDonationDate: 1,
+            },
+        },
+    ]);
+
+    return leaderboard.map((entry, index) => ({
+        ...entry,
+        rank: index + 1,
+        badge: getLeaderboardBadge(index + 1),
+    }));
+};
+
+function getLeaderboardBadge(rank: number) {
+    if (rank === 1) return '🥇';
+    if (rank === 2) return '🥈';
+    if (rank === 3) return '🥉';
+    if (rank <= 10) return '⭐';
+    return '';
+}

@@ -39,6 +39,7 @@ const CreateRequestPage = () => {
   const [patientName, setPatientName] = useState("");
   const [contactNumber, setContactNumber] = useState("");
   const [requiredDate, setRequiredDate] = useState("");
+  const [expiresAt, setExpiresAt] = useState("");
   const [notes, setNotes] = useState("");
   const [locationData, setLocationData] = useState<LocationData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -79,7 +80,7 @@ const CreateRequestPage = () => {
     try {
       const formData = new FormData();
       formData.append("document", selectedFile);
-      const res = await fetch("/api/v1/requests/verify-document", {
+      const res = await fetch("/api/v1/requests/verify-document?type=prescription", {
         method: "POST",
         credentials: "include",
         body: formData,
@@ -91,12 +92,13 @@ const CreateRequestPage = () => {
       setVerification(result);
 
       if (result.isVerified) {
-        toast.success("Document verified!");
+        toast.success("✓ Prescription verified! Information extracted.");
         if (result.patientName && !patientName) setPatientName(result.patientName);
         if (result.bloodGroup && !bloodGroup) setBloodGroup(result.bloodGroup);
         if (result.hospitalName && !hospitalName) setHospitalName(result.hospitalName);
       } else {
-        toast.error("Verification failed. Try a different document.");
+        const flagsText = result.flags.length > 0 ? `Issues: ${result.flags.join(', ')}` : "Verification failed.";
+        toast.error(`Document couldn't be verified. ${flagsText} Try a different document.`);
       }
     } catch {
       toast.error("Network error during verification.");
@@ -153,6 +155,7 @@ const CreateRequestPage = () => {
           urgency,
           hospitalName: hospitalName.trim(),
           requiredDate: new Date(requiredDate).toISOString(),
+          expiresAt: expiresAt ? new Date(expiresAt).toISOString() : undefined,
           contactNumber: contactNumber.trim(),
           notes: notes.trim() || undefined,
           location: Object.keys(location).length > 0 ? location : undefined,
@@ -375,6 +378,19 @@ const CreateRequestPage = () => {
               />
             </div>
           </div>
+
+          <div style={{ marginTop: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", background: "#f5f5f5", borderRadius: 14, padding: "0 14px" }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 20, color: "#aaa", marginRight: 10, fontVariationSettings: "'FILL' 1" }}>timer</span>
+              <input
+                type="datetime-local"
+                value={expiresAt}
+                onChange={(e) => setExpiresAt(e.target.value)}
+                style={{ flex: 1, border: "none", background: "transparent", padding: "14px 0", fontSize: 15, outline: "none", color: expiresAt ? "#1a1c1d" : "#999" }}
+              />
+            </div>
+            <p style={{ fontSize: 11, color: "#999", margin: "6px 2px 0" }}>Optional expiry time for the request.</p>
+          </div>
         </div>
 
         {/* ── 5. Hospital Location (map) ── */}
@@ -406,8 +422,8 @@ const CreateRequestPage = () => {
               <span className="material-symbols-outlined" style={{ fontSize: 20, color: "#2e7d32", fontVariationSettings: "'FILL' 1" }}>verified_user</span>
             </div>
             <div>
-              <p style={{ fontWeight: 700, fontSize: 14, color: "#1a1c1d", margin: 0 }}>Verify Hospital Document</p>
-              <p style={{ fontSize: 11, color: "#999", margin: "2px 0 0" }}>Upload prescription or admission form</p>
+              <p style={{ fontWeight: 700, fontSize: 14, color: "#1a1c1d", margin: 0 }}>Verify Medical Document</p>
+              <p style={{ fontSize: 11, color: "#999", margin: "2px 0 0" }}>Upload prescription, blood bank receipt, or OPD bill</p>
             </div>
           </div>
 

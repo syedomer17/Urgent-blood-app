@@ -4,6 +4,7 @@ import { User, IUser } from '../users/user.model';
 import { AppError } from '../../utils/appError';
 import { StatusCodes } from 'http-status-codes';
 import { config } from '../../config/env';
+import { verifyHospitalDocument } from '../../utils/hospitalVerification';
 
 const generateTokens = (userId: string, role: string) => {
     const accessToken = jwt.sign({ sub: userId, role }, config.jwt.secret, {
@@ -63,6 +64,10 @@ export const login = async (loginData: any) => {
         throw new AppError('Incorrect email or password', StatusCodes.UNAUTHORIZED);
     }
 
+    if ((user as any).accountStatus === 'blocked' || (user as any).accountStatus === 'suspended') {
+        throw new AppError('Your account is temporarily unavailable. Please contact an administrator.', StatusCodes.FORBIDDEN);
+    }
+
     const tokens = generateTokens(user._id.toString(), user.role);
 
     // Rotate: replace old tokens? Or add new?
@@ -87,6 +92,10 @@ export const refreshToken = async (incomingRefreshToken: string) => {
 
         const user = await User.findById(decoded.sub).select('+refreshTokens');
         if (!user) throw new AppError('User not found', StatusCodes.UNAUTHORIZED);
+
+        if ((user as any).accountStatus === 'blocked' || (user as any).accountStatus === 'suspended') {
+            throw new AppError('Your account is temporarily unavailable. Please contact an administrator.', StatusCodes.FORBIDDEN);
+        }
 
         // Verify if token exists in DB (we stored hashed)
         // We have to iterate and compare because we stored hashes.
@@ -140,4 +149,80 @@ export const logout = async (userId: string, incomingRefreshToken: string) => {
 
     user.refreshTokens = newTokens;
     await user.save();
+};
+
+export const registerHospital = async (userData: any, file?: { path: string; filename: string; mimetype: string }) => {
+    if (await User.findOne({ email: userData.email })) {
+        throw new AppError('Email already taken', StatusCodes.CONFLICT);
+    }
+
+    const hashedPassword = await bcrypt.hash(userData.password, 10);
+
+    const userObj: any = {
+        name: userData.name,
+        email: userData.email,
+        password: hashedPassword,
+        role: 'hospital',
+        contactNumber: userData.contactNumber || '',
+        hospitalDetails: {
+            hospitalName: userData.hospitalName,
+            registrationNumber: userData.registrationNumber,
+            licenseNumber: userData.licenseNumber,
+            gstNumber: userData.gstNumber || '',
+            hospitalAddress: userData.hospitalAddress,
+            hospitalEmail: userData.hospitalEmail,
+            hospitalPhone: userData.hospitalPhone,
+        },
+        verification: {
+            status: 'pending',
+            documents: [],
+        },
+        isVerified: false,
+    };
+
+    let verificationResult = null;
+
+    if (file) {
+        userObj.verification.documents.push({
+            filename: file.filename,
+            path: file.path,
+            mimeType: file.mimetype,
+            uploadedAt: new Date(),
+        });
+
+        verificationResult = await verifyHospitalDocument(file.path, file.mimetype);
+
+        userObj.verification.aiSuggestedVerified = verificationResult.verificationStatus === 'verified';
+        userObj.verification.aiConfidence = verificationResult.confidenceScore;
+        userObj.verification.aiDetails = JSON.stringify(verificationResult);
+
+        if (verificationResult.confidenceScore >= 80 && verificationResult.verificationStatus === 'verified') {
+            userObj.verification.status = 'approved';
+            userObj.isVerified = true;
+        }
+    }
+
+    if (userData.location) {
+        try {
+            const processedLocation = await import('../../utils/locationHelper').then(m => m.processLocation(userData.location));
+            if (processedLocation) {
+                userObj.location = processedLocation;
+            }
+        } catch (error) {
+            // handle error
+        }
+    }
+
+    const user = await User.create(userObj);
+    const tokens = generateTokens(user._id.toString(), user.role);
+
+    const hashedRefreshToken = await bcrypt.hash(tokens.refreshToken, 10);
+    user.refreshTokens = [hashedRefreshToken];
+    await user.save();
+
+    const userResponse = user.toObject();
+    delete (userResponse as any).password;
+    delete (userResponse as any).refreshTokens;
+
+    return { user: userResponse, ...tokens, verificationResult };
 };

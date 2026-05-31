@@ -5,6 +5,7 @@ import RegisterPage from "./pages/Register";
 import LoginPage from "./pages/Login";
 import DashboardPage from "./pages/Dashboard";
 import AdminDashboardPage from "./pages/AdminDashboard";
+import HospitalDashboardPage from "./pages/HospitalDashboard";
 import VerificationsPage from "./pages/AdminDashboard/VerificationsPage";
 import RequesterDashboardPage from "./pages/RequesterDashboard";
 import DonorsNearMePage from "./pages/RequesterDashboard/DonorsNearMePage";
@@ -21,6 +22,8 @@ function getHomePath(role: string) {
       return "/admin";
     case "requester":
       return "/requester";
+    case "hospital":
+      return "/hospital";
     default:
       return "/dashboard";
   }
@@ -116,12 +119,22 @@ function App() {
                 )
               }
             />
+            <Route
+              path="/hospital"
+              element={
+                user.role === "hospital" ? (
+                  <HospitalDashboardPage user={user} />
+                ) : (
+                  <Navigate to={homePath} replace />
+                )
+              }
+            />
 
             {/* Requester-only routes */}
             <Route
               path="/requester/donors-near-me"
               element={
-                user.role === "requester" ? (
+                user.role === "requester" || user.role === "hospital" ? (
                   <DonorsNearMePage user={user} />
                 ) : (
                   <Navigate to={homePath} replace />

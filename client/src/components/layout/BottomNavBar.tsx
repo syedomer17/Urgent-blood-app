@@ -9,7 +9,7 @@ interface NavItem {
 
 function getNavItems(role: string): NavItem[] {
   const homePath =
-    role === "admin" ? "/admin" : role === "requester" ? "/requester" : "/dashboard";
+    role === "admin" ? "/admin" : role === "requester" ? "/requester" : role === "hospital" ? "/hospital" : "/dashboard";
 
   if (role === "requester") {
     return [
@@ -17,6 +17,15 @@ function getNavItems(role: string): NavItem[] {
       { path: "/donors", icon: "group", label: "Donors" },
       { path: "/requester/donors-near-me", icon: "person_search", label: "Near Me" },
 
+      { path: "/profile", icon: "person", label: "Profile" },
+    ];
+  }
+
+  if (role === "hospital") {
+    return [
+      { path: homePath, icon: "home_health", label: "Home" },
+      { path: "/requester/donors-near-me", icon: "person_search", label: "Donors" },
+      { path: "/create-request", icon: "add_circle", label: "Request" },
       { path: "/profile", icon: "person", label: "Profile" },
     ];
   }

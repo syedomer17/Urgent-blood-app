@@ -20,6 +20,7 @@ export interface IBloodRequest extends Document {
     patientName: string;
     hospitalName: string;
     requiredDate: Date;
+    expiresAt?: Date;
     bloodGroup: 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-';
     unitsRequired: number;
     urgency: 'low' | 'medium' | 'high' | 'critical';
@@ -61,6 +62,9 @@ const bloodRequestSchema = new Schema<IBloodRequest>(
         requiredDate: {
             type: Date,
             required: true,
+        },
+        expiresAt: {
+            type: Date,
         },
         bloodGroup: {
             type: String,

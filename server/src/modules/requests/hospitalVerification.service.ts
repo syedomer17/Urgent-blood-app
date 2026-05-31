@@ -10,6 +10,22 @@ export interface VerificationResult {
     isVerified: boolean;
     confidence: number;
     hospitalName: string | null;
+    registrationNumber?: string | null;
+    licenseNumber?: string | null;
+    gstNumber?: string | null;
+    address?: string | null;
+    email?: string | null;
+    phoneNumber?: string | null;
+    issueDate?: string | null;
+    expiryDate?: string | null;
+    governmentSealDetected?: boolean;
+    signatureDetected?: boolean;
+    documentReadable?: boolean;
+    possibleTampering?: boolean;
+    verificationStatus?: 'verified' | 'suspicious' | 'rejected';
+    confidenceScore?: number;
+    reasons?: string[];
+    missingFields?: string[];
     documentType: string | null;
     patientName: string | null;
     bloodGroup: string | null;
@@ -36,35 +52,66 @@ export async function verifyHospitalDocument(filePath: string): Promise<Verifica
 
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-    const prompt = `You are a medical document verification AI for a blood donation platform called LifeLink.
+    const prompt = `You are an AI Hospital Verification Assistant for a Blood Donation Platform.
 
-Analyze this uploaded document (image or PDF) and determine if it is a legitimate hospital or medical document related to a blood request.
+Your task is to analyze the uploaded hospital documents and determine whether the hospital appears legitimate.
 
-You must check for:
-1. Is this a real hospital/medical document? (e.g., hospital letterhead, blood test report, doctor's prescription, hospital admission form, blood request form, patient records)
-2. Can you identify the hospital or medical facility name?
-3. Can you identify any patient name mentioned?
-4. Can you identify any blood group mentioned?
-5. What type of document is this? (e.g., "Blood Test Report", "Hospital Admission Form", "Doctor's Prescription", "Blood Request Form", "Unknown")
-6. Are there any red flags? (e.g., the image looks edited/fake, it's not a medical document at all, it's a random photo, it's a screenshot of something unrelated)
+Instructions:
 
-Respond ONLY in this exact JSON format (no markdown, no code blocks):
+1. Extract all available information from the document.
+2. Verify whether the document appears authentic.
+3. Check for:Hospital Name
+4. Registration Number
+5. License Number
+6. GST Number (if available)
+7. Address
+8. Email
+9. Phone Number
+10. Issue Date
+11. Expiry Date
+12. Government Seal or Stamp
+13. Authorized Signatures
+14. Detect possible issues:Missing information
+15. Expired licenses
+16. Blurry or unreadable documents
+17. Signs of editing or tampering
+18. Missing seals or signatures
+19. Assign a confidence score between 0 and 100.
+20. Return ONLY valid JSON.
+21. Do not include markdown, explanations, or extra text.
+
+Required JSON Format:
+
 {
-    "isVerified": true/false,
-    "confidence": 0.0-1.0,
-    "hospitalName": "Hospital Name or null",
-    "documentType": "Type of document or null",
-    "patientName": "Patient name if visible or null",
-    "bloodGroup": "Blood group if visible or null",
-    "details": "Brief description of what you see in the document",
-    "flags": ["list of any concerns or red flags, empty array if none"]
+"hospitalName": "",
+"registrationNumber": "",
+"licenseNumber": "",
+"gstNumber": "",
+"address": "",
+"email": "",
+"phoneNumber": "",
+"issueDate": "",
+"expiryDate": "",
+"governmentSealDetected": false,
+"signatureDetected": false,
+"documentReadable": true,
+"possibleTampering": false,
+"verificationStatus": "verified | suspicious | rejected",
+"confidenceScore": 0,
+"reasons": [],
+"missingFields": []
 }
 
-Rules:
-- Set isVerified to true ONLY if you are reasonably confident this is a legitimate medical/hospital document
-- confidence should reflect how certain you are (0.0 = not at all, 1.0 = absolutely certain)
-- If the document is clearly not medical related (random photo, meme, screenshot of social media, etc.), set isVerified to false with low confidence
-- Be strict but fair — even a simple hospital letterhead or prescription should pass if it looks legitimate`;
+Verification Rules:
+
+- If license is expired → verificationStatus = "rejected"
+- If document is unreadable → verificationStatus = "rejected"
+- If registration number is missing → verificationStatus = "suspicious"
+- If government seal is missing → verificationStatus = "suspicious"
+- If signs of tampering exist → verificationStatus = "suspicious"
+- If all required fields exist and no issues are found → verificationStatus = "verified"
+
+Analyze the uploaded document and return the JSON response only.`;
 
     try {
         const result = await model.generateContent([
@@ -86,17 +133,37 @@ Rules:
             jsonStr = jsonMatch[0];
         }
 
-        const parsed = JSON.parse(jsonStr) as VerificationResult;
+        const parsed = JSON.parse(jsonStr) as any;
+        const verificationStatus = parsed.verificationStatus || (parsed.isVerified ? 'verified' : 'rejected');
+        const confidenceScore = typeof parsed.confidenceScore === 'number'
+            ? parsed.confidenceScore
+            : Math.round((Number(parsed.confidence) || 0) * 100);
 
         return {
-            isVerified: Boolean(parsed.isVerified),
-            confidence: Math.min(1, Math.max(0, Number(parsed.confidence) || 0)),
+            isVerified: verificationStatus === 'verified',
+            confidence: Math.min(1, Math.max(0, confidenceScore / 100)),
             hospitalName: parsed.hospitalName || null,
+            registrationNumber: parsed.registrationNumber || null,
+            licenseNumber: parsed.licenseNumber || null,
+            gstNumber: parsed.gstNumber || null,
+            address: parsed.address || null,
+            email: parsed.email || null,
+            phoneNumber: parsed.phoneNumber || null,
+            issueDate: parsed.issueDate || null,
+            expiryDate: parsed.expiryDate || null,
+            governmentSealDetected: Boolean(parsed.governmentSealDetected),
+            signatureDetected: Boolean(parsed.signatureDetected),
+            documentReadable: parsed.documentReadable !== false,
+            possibleTampering: Boolean(parsed.possibleTampering),
+            verificationStatus,
+            confidenceScore,
+            reasons: Array.isArray(parsed.reasons) ? parsed.reasons : [],
+            missingFields: Array.isArray(parsed.missingFields) ? parsed.missingFields : [],
             documentType: parsed.documentType || null,
             patientName: parsed.patientName || null,
             bloodGroup: parsed.bloodGroup || null,
-            details: parsed.details || 'No details provided',
-            flags: Array.isArray(parsed.flags) ? parsed.flags : [],
+            details: parsed.details || parsed.reasons?.join(', ') || 'No details provided',
+            flags: Array.isArray(parsed.flags) ? parsed.flags : Array.isArray(parsed.reasons) ? parsed.reasons : [],
         };
     } catch (error: any) {
         console.error('Gemini verification error:', error?.message);
@@ -104,6 +171,22 @@ Rules:
             isVerified: false,
             confidence: 0,
             hospitalName: null,
+            registrationNumber: null,
+            licenseNumber: null,
+            gstNumber: null,
+            address: null,
+            email: null,
+            phoneNumber: null,
+            issueDate: null,
+            expiryDate: null,
+            governmentSealDetected: false,
+            signatureDetected: false,
+            documentReadable: false,
+            possibleTampering: false,
+            verificationStatus: 'rejected',
+            confidenceScore: 0,
+            reasons: ['AI verification failed — service error'],
+            missingFields: [],
             documentType: null,
             patientName: null,
             bloodGroup: null,

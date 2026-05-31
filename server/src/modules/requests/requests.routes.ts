@@ -102,10 +102,10 @@ router.get('/map-data', requestController.getMapData);
  *       403:
  *         description: Forbidden (Only requesters or admins)
  */
-router.post('/', restrictTo('requester', 'admin'), validate(createRequestSchema), requestController.createRequest);
+router.post('/', restrictTo('requester', 'hospital', 'admin'), validate(createRequestSchema), requestController.createRequest);
 
 // POST verify hospital document — upload + AI verification
-router.post('/verify-document', restrictTo('requester', 'admin'), upload.single('document'), requestController.verifyDocument);
+router.post('/verify-document', restrictTo('requester', 'hospital', 'admin'), upload.single('document'), requestController.verifyDocument);
 
 /**
  * @swagger
@@ -119,7 +119,7 @@ router.post('/verify-document', restrictTo('requester', 'admin'), upload.single(
  *       200:
  *         description: Requests retrieved successfully
  */
-router.get('/my-requests', restrictTo('requester'), requestController.getMyRequests);
+router.get('/my-requests', restrictTo('requester', 'hospital'), requestController.getMyRequests);
 
 /**
  * @swagger

@@ -26,6 +26,7 @@ import donationRoutes from './modules/donations/donations.routes';
 import adminRoutes from './modules/admin/admin.routes';
 import donorRoutes from './modules/donors/donors.routes';
 import chatRoutes from './modules/chat/chat.routes';
+import notificationRoutes from './modules/notifications/notification.routes';
 
 const app = express();
 
@@ -77,6 +78,7 @@ app.use('/api/v1/donations', donationRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/donors', donorRoutes);
 app.use('/api/v1/chat', chatRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
 
 app.get("/", (req: Request, res: Response) => {
     res.status(200).json({ message: 'Server is healthy', timestamp: new Date() });

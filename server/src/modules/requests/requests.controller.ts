@@ -2,7 +2,8 @@ import { Request, Response } from 'express';
 import { catchAsync } from '../../utils/catchAsync';
 import { sendResponse } from '../../utils/responseHandler';
 import * as requestService from './requests.service';
-import { verifyHospitalDocument } from './hospitalVerification.service';
+import { verifyHospitalDocument } from '../../utils/hospitalVerification';
+import { verifyPrescriptionDocument } from '../../utils/prescriptionVerification';
 import { StatusCodes } from 'http-status-codes';
 import fs from 'fs';
 import { User } from '../users/user.model';
@@ -14,7 +15,7 @@ export const createRequest = catchAsync(async (req: Request, res: Response) => {
     if (hospitalName) {
         const user = req.user as any;
         const isAdmin = user?.role === 'admin';
-        const isRequesterVerified = user?.role === 'requester' && Boolean(user?.isVerified);
+        const isRequesterVerified = (user?.role === 'requester' || user?.role === 'hospital') && Boolean(user?.isVerified);
         if (!isAdmin && !isRequesterVerified) {
             return res.status(StatusCodes.FORBIDDEN).json({ success: false, message: 'Only verified hospitals or admins can create requests mentioning a hospital.' });
         }
@@ -50,13 +51,12 @@ export const verifyDocument = catchAsync(async (req: Request, res: Response) => 
     if (!req.file) {
         return res.status(StatusCodes.BAD_REQUEST).json({
             success: false,
-            message: 'No file uploaded. Please upload a hospital document (image or PDF).',
+            message: 'No file uploaded. Please upload a document (prescription, blood bank receipt, or hospital document).',
         });
     }
 
     const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
     if (!allowedMimes.includes(req.file.mimetype)) {
-        // Clean up uploaded file
         fs.unlinkSync(req.file.path);
         return res.status(StatusCodes.BAD_REQUEST).json({
             success: false,
@@ -74,7 +74,12 @@ export const verifyDocument = catchAsync(async (req: Request, res: Response) => 
     }
 
     try {
-        const result = await verifyHospitalDocument(req.file.path);
+        // Determine document type: prescription (default for requests) or hospital (for hospital registration)
+        const documentType = req.query.type === 'hospital' ? 'hospital' : 'prescription';
+        
+        const result = documentType === 'hospital' 
+            ? await verifyHospitalDocument(req.file.path, req.file.mimetype)
+            : await verifyPrescriptionDocument(req.file.path, req.file.mimetype);
 
         // Persist uploaded file metadata into the user's verification.documents
         try {
@@ -86,38 +91,53 @@ export const verifyDocument = catchAsync(async (req: Request, res: Response) => 
                     uploadedAt: new Date(),
                 };
 
-                // Store AI suggestion but keep status as 'pending' for admin review
-                // Determine if we should auto-approve based on config threshold
-                const threshold = Number(config.ai.autoApproveConfidence || 0.8);
-                const shouldAutoApprove = Boolean(result.isVerified) && Number(result.confidence || 0) >= threshold;
+                // For hospital documents: Store AI suggestion but keep status as 'pending' for admin review
+                // For prescriptions: Only store, don't auto-verify user
+                if (documentType === 'hospital') {
+                    const threshold = Number(config.ai.autoApproveConfidence || 0.8);
+                    const shouldAutoApprove = Boolean((result as any).verificationStatus === 'verified') && Number((result as any).confidenceScore || 0) >= threshold;
 
-                const update: any = {
-                    $push: { 'verification.documents': fileDoc },
-                    $set: {
-                        'verification.aiSuggestedVerified': Boolean(result.isVerified),
-                        'verification.aiConfidence': Number(result.confidence || 0),
-                        'verification.aiDetails': result.details || '',
-                    },
-                };
+                    const update: any = {
+                        $push: { 'verification.documents': fileDoc },
+                        $set: {
+                            'verification.aiSuggestedVerified': Boolean((result as any).verificationStatus === 'verified'),
+                            'verification.aiConfidence': Number((result as any).confidenceScore || 0),
+                            'verification.aiDetails': (result as any).reasons?.join(', ') || '',
+                        },
+                    };
 
-                if (shouldAutoApprove) {
-                    update.$set['verification.status'] = 'approved';
-                    update.$set['verification.aiAutoApproved'] = true;
-                    update.$set['isVerified'] = true;
-                    update.$set['verification.reviewedAt'] = new Date();
+                    if (shouldAutoApprove) {
+                        update.$set['verification.status'] = 'approved';
+                        update.$set['verification.aiAutoApproved'] = true;
+                        update.$set['isVerified'] = true;
+                        update.$set['verification.reviewedAt'] = new Date();
+                    } else {
+                        update.$set['verification.status'] = 'pending';
+                    }
+
+                    await User.findByIdAndUpdate((req.user as any)._id, update).exec();
                 } else {
-                    update.$set['verification.status'] = 'pending';
+                    // For prescriptions, just track that a document was submitted for verification
+                    // Don't auto-approve the user - this is for blood requests, not user verification
+                    const update: any = {
+                        $push: { 'requestDocuments': fileDoc },
+                    };
+                    // Optionally track prescription verification results
+                    if ((result as any).isVerified) {
+                        update.$push['prescriptionVerifications'] = {
+                            ...result,
+                            uploadedAt: new Date(),
+                        };
+                    }
                 }
-
-                await User.findByIdAndUpdate((req.user as any)._id, update).exec();
             }
         } catch (e) {
-            // log but don't fail the whole request — admin can still review via record
             console.error('Failed to persist verification document info:', (e as any)?.message || e);
         }
 
         sendResponse(res, StatusCodes.OK, true, 'Document verification complete', {
             verification: result,
+            documentType,
             file: {
                 fileName: req.file.originalname,
                 filePath: req.file.path,
@@ -126,7 +146,6 @@ export const verifyDocument = catchAsync(async (req: Request, res: Response) => 
             },
         });
     } catch (error) {
-        // Clean up on error
         if (fs.existsSync(req.file.path)) {
             fs.unlinkSync(req.file.path);
         }
@@ -137,7 +156,7 @@ export const verifyDocument = catchAsync(async (req: Request, res: Response) => 
 export const getMatchingDonors = catchAsync(async (req: Request, res: Response) => {
     const donors = await requestService.getMatchingDonors(req.params.id as string);
     const callerRole = (req.user && (req.user as any).role) || 'anonymous';
-    if (!['requester', 'admin'].includes(callerRole)) {
+    if (!['requester', 'hospital', 'admin'].includes(callerRole)) {
         donors.forEach((d: any) => { if (d && d.contactNumber) delete d.contactNumber; });
     }
     sendResponse(res, StatusCodes.OK, true, 'Matching donors retrieved', donors);

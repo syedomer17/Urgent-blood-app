@@ -49,5 +49,7 @@ router.use(protect);
  *         description: Forbidden (Only donors)
  */
 router.post('/accept', restrictTo('donor'), validate(acceptRequestSchema), donationController.acceptRequest);
+router.get('/history', restrictTo('donor'), donationController.getMyDonationHistory);
+router.get('/leaderboard', donationController.getLeaderboard);
 
 export default router;

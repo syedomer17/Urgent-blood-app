@@ -32,6 +32,20 @@ export const register = catchAsync(async (req: Request, res: Response) => {
     sendResponse(res, StatusCodes.CREATED, true, 'User registered successfully', { user: result.user });
 });
 
+export const registerHospital = catchAsync(async (req: Request, res: Response) => {
+    const file = req.file ? { path: req.file.path, filename: req.file.filename, mimetype: req.file.mimetype } : undefined;
+    const result = await authService.registerHospital(req.body, file);
+
+    // Set cookies (tokens are ONLY sent via cookies, not in response body)
+    res.cookie('accessToken', result.accessToken, accessTokenCookieOptions);
+    res.cookie('refreshToken', result.refreshToken, cookieOptions);
+
+    sendResponse(res, StatusCodes.CREATED, true, 'Hospital registered successfully', {
+        user: result.user,
+        verificationResult: result.verificationResult,
+    });
+});
+
 export const login = catchAsync(async (req: Request, res: Response) => {
     const result = await authService.login(req.body);
 

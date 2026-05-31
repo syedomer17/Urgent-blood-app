@@ -73,20 +73,5 @@ export const processLocation = async (locationData: LocationInput): Promise<Loca
         }
     }
 
-    // 3. Fallback: If we have structured data but geocoding failed, return without coordinates 
-    // (though map features won't work for this user until they have coordinates)
-    if (city || state || country) {
-        return {
-            type: 'Point',
-            coordinates: [], // Empty coordinates if geocoding failed
-            address,
-            country,
-            state,
-            city,
-            zipCode,
-            areaName,
-        };
-    }
-
     return undefined;
 };

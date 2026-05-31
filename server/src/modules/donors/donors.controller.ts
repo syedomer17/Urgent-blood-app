@@ -10,7 +10,7 @@ export const getAllDonors = catchAsync(async (_req: Request, res: Response) => {
     // Redact contactNumber for callers who are not admin or verified hospitals
     const callerRole = (_req.user && (_req.user as any).role) || 'anonymous';
     const callerIsAdmin = callerRole === 'admin';
-    const callerIsRequesterVerified = callerRole === 'requester' && Boolean((_req.user as any)?.isVerified);
+    const callerIsRequesterVerified = (callerRole === 'requester' || callerRole === 'hospital') && Boolean((_req.user as any)?.isVerified);
     if (!callerIsAdmin && !callerIsRequesterVerified) {
         donors.forEach((d: any) => { if (d && d.contactNumber) delete d.contactNumber; });
     }
@@ -27,7 +27,7 @@ export const getNearbyDonors = catchAsync(async (req: Request, res: Response) =>
     // Redact contactNumber for callers who are not admin or verified hospitals
     const callerRole = (req.user && (req.user as any).role) || 'anonymous';
     const callerIsAdmin2 = callerRole === 'admin';
-    const callerIsRequesterVerified2 = callerRole === 'requester' && Boolean((req.user as any)?.isVerified);
+    const callerIsRequesterVerified2 = (callerRole === 'requester' || callerRole === 'hospital') && Boolean((req.user as any)?.isVerified);
     if (!callerIsAdmin2 && !callerIsRequesterVerified2) {
         donors.forEach((d: any) => { if (d && d.contactNumber) delete d.contactNumber; });
     }
@@ -64,7 +64,7 @@ export const searchDonorsByCity = catchAsync(async (req: Request, res: Response)
     // Redact contactNumber for callers who are not admin or verified hospitals
     const callerRole = (req.user && (req.user as any).role) || 'anonymous';
     const callerIsAdmin3 = callerRole === 'admin';
-    const callerIsRequesterVerified3 = callerRole === 'requester' && Boolean((req.user as any)?.isVerified);
+    const callerIsRequesterVerified3 = (callerRole === 'requester' || callerRole === 'hospital') && Boolean((req.user as any)?.isVerified);
     if (!callerIsAdmin3 && !callerIsRequesterVerified3) {
         donors.forEach((d: any) => { if (d && d.contactNumber) delete d.contactNumber; });
     }

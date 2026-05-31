@@ -4,9 +4,15 @@ export interface IUser extends Document {
     name: string;
     email: string;
     password?: string;
-    role: 'donor' | 'requester' | 'admin';
+    role: 'donor' | 'requester' | 'admin' | 'hospital';
+    accountStatus?: 'active' | 'suspended' | 'blocked';
     bloodGroup?: 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-';
     contactNumber: string;
+    dateOfBirth?: Date;
+    weightKg?: number;
+    medicalConditions?: string[];
+    nextReminderAt?: Date;
+    reminderEnabled?: boolean;
     location?: {
         type: 'Point';
         coordinates: number[]; // [longitude, latitude]
@@ -45,6 +51,15 @@ export interface IUser extends Document {
         };
     };
     avatar?: string;
+    hospitalDetails?: {
+        hospitalName?: string;
+        registrationNumber?: string;
+        licenseNumber?: string;
+        gstNumber?: string;
+        hospitalAddress?: string;
+        hospitalEmail?: string;
+        hospitalPhone?: string;
+    };
     isOnline?: boolean;
     lastActivity?: Date;
     // Verification fields for admin review
@@ -90,12 +105,36 @@ const userSchema = new Schema<IUser>(
         },
         role: {
             type: String,
-            enum: ['donor', 'requester', 'admin'],
+            enum: ['donor', 'requester', 'admin', 'hospital'],
             default: 'donor',
+        },
+        accountStatus: {
+            type: String,
+            enum: ['active', 'suspended', 'blocked'],
+            default: 'active',
         },
         bloodGroup: {
             type: String,
             enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
+        },
+        dateOfBirth: {
+            type: Date,
+        },
+        weightKg: {
+            type: Number,
+            min: 30,
+            max: 250,
+        },
+        medicalConditions: {
+            type: [String],
+            default: [],
+        },
+        nextReminderAt: {
+            type: Date,
+        },
+        reminderEnabled: {
+            type: Boolean,
+            default: false,
         },
         contactNumber: {
             type: String,
@@ -171,6 +210,15 @@ const userSchema = new Schema<IUser>(
             },
         },
         avatar: String,
+        hospitalDetails: {
+            hospitalName: String,
+            registrationNumber: String,
+            licenseNumber: String,
+            gstNumber: String,
+            hospitalAddress: String,
+            hospitalEmail: String,
+            hospitalPhone: String,
+        },
         isOnline: {
             type: Boolean,
             default: false,
@@ -218,8 +266,14 @@ const userSchema = new Schema<IUser>(
     }
 );
 
+userSchema.pre('save', function () {
+    const location = this.location as IUser['location'] | undefined;
+    if (location && (!Array.isArray(location.coordinates) || location.coordinates.length < 2)) {
+        this.set('location', undefined);
+    }
+});
+
 // Indexes
-userSchema.index({ email: 1 }, { unique: true });
 userSchema.index({ role: 1 });
 userSchema.index({ bloodGroup: 1 });
 userSchema.index({ bloodGroup: 1, role: 1 }); // Compound index

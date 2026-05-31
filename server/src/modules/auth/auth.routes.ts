@@ -1,8 +1,38 @@
 import express from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import validate from '../../middlewares/validate';
-import { registerSchema, loginSchema, refreshTokenSchema } from './auth.validation';
+import { registerSchema, loginSchema, refreshTokenSchema, registerHospitalSchema } from './auth.validation';
 import * as authController from './auth.controller';
 import { protect } from '../../middlewares/auth';
+
+const hospitalUploadsDir = path.join(process.cwd(), 'uploads', 'hospital-docs');
+if (!fs.existsSync(hospitalUploadsDir)) {
+    fs.mkdirSync(hospitalUploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, hospitalUploadsDir),
+    filename: (_req, file, cb) => {
+        const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+        const ext = path.extname(file.originalname);
+        cb(null, `hospital-reg-${uniqueSuffix}${ext}`);
+    },
+});
+
+const upload = multer({
+    storage,
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+        const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+        if (allowed.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file type. Only JPG, PNG, WebP, and PDF are allowed.'));
+        }
+    },
+});
 
 const router = express.Router();
 
@@ -40,7 +70,7 @@ const router = express.Router();
  *                 format: password
  *               role:
  *                 type: string
- *                 enum: [donor, requester]
+ *                 enum: [donor, requester, hospital]
  *     responses:
  *       201:
  *         description: User registered successfully
@@ -50,6 +80,69 @@ const router = express.Router();
  *         description: Email already taken
  */
 router.post('/register', validate(registerSchema), authController.register);
+
+/**
+ * @swagger
+ * /auth/register-hospital:
+ *   post:
+ *     summary: Register a hospital with document verification
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password
+ *               - role
+ *               - hospitalName
+ *               - registrationNumber
+ *               - licenseNumber
+ *               - hospitalAddress
+ *               - hospitalEmail
+ *               - hospitalPhone
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 format: password
+ *               role:
+ *                 type: string
+ *                 enum: [hospital]
+ *               hospitalName:
+ *                 type: string
+ *               registrationNumber:
+ *                 type: string
+ *               licenseNumber:
+ *                 type: string
+ *               gstNumber:
+ *                 type: string
+ *               hospitalAddress:
+ *                 type: string
+ *               hospitalEmail:
+ *                 type: string
+ *                 format: email
+ *               hospitalPhone:
+ *                 type: string
+ *               document:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       201:
+ *         description: Hospital registered successfully
+ *       400:
+ *         description: Validation error
+ *       409:
+ *         description: Email already taken
+ */
+router.post('/register-hospital', upload.single('document'), validate(registerHospitalSchema), authController.registerHospital);
 
 /**
  * @swagger

@@ -1,0 +1,123 @@
+Admin Dashboard Feature Gap Checklist
+
+Present
+- View all donors
+- View blood requests list
+- Verify hospital accounts
+- Approve/reject hospital verification
+- View pending verification queue
+- Blood group distribution stat
+- Total donors stat
+- Recent requests panel
+- Uploaded hospital documents review
+- AI review summary for verification
+
+Partial
+- View all requestors
+- View all hospitals
+- Verify donor identity
+- Review uploaded medical reports
+- Send emergency notifications
+- Broadcast SMS/Email/Push notifications
+- Region-specific alerts
+- Donation history
+- Blood request listing for admin use
+
+Missing
+- Suspend/activate users
+- Block fake accounts
+- Approve/reject emergency requests
+- Mark request as fulfilled from admin panel
+- Cancel fraudulent requests
+- Verify blood donation certificates
+- Active donors stat
+- Blood requests today stat
+- Emergency requests stat
+- Fulfilled requests stat
+- Hospital activity reports
+- Request fulfillment reports
+- Audit logs for who changed what
+- Login history
+- Suspicious activity tracking
+
+Notes
+- Admin backend currently exposes only stats and verification review endpoints.
+- Admin frontend currently shows dashboard KPIs, recent requests, and verification review.
+- User management, request moderation, reports, alerts, and audit logging are not fully implemented yet.
+
+Hospital Dashboard Feature Gap Checklist
+
+Present
+- Hospital profile details
+- Hospital license/contact details
+- Hospital verification status
+- Create blood request flow for hospital role
+- Nearby donor search
+- Donor availability and blood group filtering
+- Request tracking through request status data
+- Hospital document verification support
+- One-tap contact visibility for hospital/requester roles
+
+Partial
+- Hospital dashboard home screen
+- Accepted donors view
+- Fulfilled requests view
+- Expired requests view
+- Chat with donors
+- Call donor directly
+- Send reminders
+- Donation records
+- Request success rates
+
+Missing
+- Dedicated hospital dashboard UI
+- Emergency blood request expiry time field
+- Filter donors by last donation date in hospital UI
+- Available blood stock view
+- Low stock alerts
+- Expiry tracking for blood inventory
+- Hospital-side donor chat panel
+- Hospital-side donor call actions
+- Reminder sending workflow
+- Hospital reports page
+- Blood inventory management section
+- Dashboard widgets for pending, accepted, fulfilled, and expired requests
+
+Donor Dashboard Feature Gap Checklist
+
+Present
+- Personal information
+- Blood group
+- Contact details
+- Availability status
+- Nearby blood requests
+- Distance calculation for requests and donors
+- Hospital information on request cards
+- Accept request action
+- Donation history totals
+- Donation leaderboard backend support
+- Donation badges and achievements backend support
+- Emergency notification backend support
+- Dedicated donor dashboard UI
+- Donation certificates download view
+- Hospitals helped report section
+- Public leaderboard screen for donors
+- Gamification badge progress UI
+- Medical condition management form
+- Weight-based eligibility warnings
+- Age-based eligibility warnings
+- Donation reminder scheduling UI
+- Not eligible reason cards
+- Instant location-based alert inbox
+- Blood donation center recommendations
+
+Partial
+- Busy status
+- Request reject action
+- Eligibility prediction
+
+Missing
+- None currently tracked
+
+Notes
+- Existing donor primitives now cover history, leaderboard, achievements, reminders, alerts, certificates, and eligibility cards.

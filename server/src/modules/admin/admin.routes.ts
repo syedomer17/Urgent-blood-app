@@ -30,5 +30,18 @@ router.get('/stats', adminController.getDashboardStats);
 router.get('/verifications', adminController.getPendingVerifications);
 router.patch('/verifications/:id/approve', adminController.approveVerification);
 router.patch('/verifications/:id/reject', adminController.rejectVerification);
+router.get('/users', adminController.getUsers);
+router.patch('/users/:id/suspend', adminController.suspendUser);
+router.patch('/users/:id/activate', adminController.activateUser);
+router.patch('/users/:id/block', adminController.blockUser);
+router.get('/requests', adminController.getRequests);
+router.get('/requests/actionable', adminController.getActionableRequests);
+router.patch('/requests/:id/approve-emergency', adminController.approveEmergencyRequest);
+router.patch('/requests/:id/reject-emergency', adminController.rejectEmergencyRequest);
+router.patch('/requests/:id/fulfill', adminController.fulfillRequest);
+router.patch('/requests/:id/cancel', adminController.cancelRequest);
+router.post('/alerts/emergency', adminController.sendEmergencyAlert);
+router.get('/reports', adminController.getReports);
+router.get('/audit-logs', adminController.getAuditLogs);
 
 export default router;

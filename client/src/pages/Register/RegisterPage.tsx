@@ -8,6 +8,7 @@ import {
   RoleToggle,
   LocationInput,
   StepIndicator,
+  HospitalFields,
 } from "../../components/register";
 import type { Role } from "../../components/register/RoleToggle";
 import type { LocationData } from "../../components/register/LocationInput";
@@ -33,6 +34,16 @@ const RegisterPage = () => {
     latitude: null,
     longitude: null,
   });
+
+  // Hospital fields
+  const [hospitalName, setHospitalName] = useState("");
+  const [registrationNumber, setRegistrationNumber] = useState("");
+  const [licenseNumber, setLicenseNumber] = useState("");
+  const [gstNumber, setGstNumber] = useState("");
+  const [hospitalAddress, setHospitalAddress] = useState("");
+  const [hospitalEmail, setHospitalEmail] = useState("");
+  const [hospitalPhone, setHospitalPhone] = useState("");
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
 
   const [loading, setLoading] = useState(false);
 
@@ -64,12 +75,74 @@ const RegisterPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (role === "hospital") {
+      if (!hospitalName.trim()) { toast.error("Hospital name is required."); return; }
+      if (!registrationNumber.trim()) { toast.error("Registration number is required."); return; }
+      if (!licenseNumber.trim()) { toast.error("License number is required."); return; }
+      if (!hospitalAddress.trim()) { toast.error("Hospital address is required."); return; }
+      if (!hospitalEmail.trim()) { toast.error("Hospital email is required."); return; }
+      if (!hospitalPhone.trim()) { toast.error("Hospital phone is required."); return; }
+      if (!documentFile) { toast.error("Please upload a hospital document for verification."); return; }
+
+      setLoading(true);
+      try {
+        const formData = new FormData();
+        formData.append("name", name.trim());
+        formData.append("email", email.trim());
+        formData.append("password", password);
+        formData.append("role", "hospital");
+        if (contactNumber.trim()) formData.append("contactNumber", contactNumber.trim());
+        formData.append("hospitalName", hospitalName.trim());
+        formData.append("registrationNumber", registrationNumber.trim());
+        formData.append("licenseNumber", licenseNumber.trim());
+        if (gstNumber.trim()) formData.append("gstNumber", gstNumber.trim());
+        formData.append("hospitalAddress", hospitalAddress.trim());
+        formData.append("hospitalEmail", hospitalEmail.trim());
+        formData.append("hospitalPhone", hospitalPhone.trim());
+        formData.append("document", documentFile);
+
+        const res = await fetch("/api/v1/auth/register-hospital", {
+          method: "POST",
+          credentials: "include",
+          body: formData,
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          toast.error(data.message || "Registration failed. Please try again.");
+          return;
+        }
+
+        const vr = data.data?.verificationResult;
+        if (vr) {
+          if (vr.verificationStatus === "verified") {
+            toast.success(`Hospital verified! Confidence: ${vr.confidenceScore}%`);
+          } else if (vr.verificationStatus === "suspicious") {
+            toast("Hospital document needs review. Your account is pending verification.", { icon: "⚠️" });
+          } else {
+            toast.error("Hospital document was rejected. Please upload a valid document.");
+          }
+        } else {
+          toast.success("Hospital registered! Pending verification.");
+        }
+
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 2000);
+      } catch {
+        toast.error("Network error. Please check your connection and try again.");
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     if (role === "donor" && !bloodGroup) {
       toast.error("Blood group is required for donors.");
       return;
     }
 
-    // Build request body
     const body: Record<string, unknown> = {
       name: name.trim(),
       email: email.trim(),
@@ -127,7 +200,7 @@ const RegisterPage = () => {
   };
 
   return (
-    <main className="flex-grow flex flex-col md:flex-row min-h-screen bg-background font-body text-on-surface">
+    <main className="grow flex flex-col md:flex-row min-h-screen bg-background font-body text-on-surface">
       <HeroSection />
 
       <section className="md:w-7/12 bg-surface p-6 md:p-20 flex flex-col justify-center">
@@ -138,18 +211,22 @@ const RegisterPage = () => {
             label={
               step === 1
                 ? "Step 1: Account Details"
-                : "Step 2: Donor Profile"
+                : role === "hospital"
+                  ? "Step 2: Hospital Verification"
+                  : "Step 2: Donor Profile"
             }
           />
 
           <header className="mb-12">
             <h3 className="font-headline text-3xl font-bold text-on-surface mb-2">
-              {step === 1 ? "Create your account" : "Complete your profile"}
+              {step === 1 ? "Create your account" : role === "hospital" ? "Hospital Verification" : "Complete your profile"}
             </h3>
             <p className="text-secondary">
               {step === 1
                 ? "Start your journey as a life-saving hero today."
-                : "Help us match you with those who need you most."}
+                : role === "hospital"
+                  ? "Upload your hospital documents for AI-powered verification."
+                  : "Help us match you with those who need you most."}
             </p>
           </header>
 
@@ -219,15 +296,40 @@ const RegisterPage = () => {
             {/* ---- STEP 2: Donor Profile ---- */}
             {step === 2 && (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <BloodGroupSelect
-                    value={bloodGroup}
-                    onChange={setBloodGroup}
-                  />
+                <div className={`grid grid-cols-1 ${role !== "hospital" ? "md:grid-cols-2" : ""} gap-6`}>
+                  {role !== "hospital" && (
+                    <BloodGroupSelect
+                      value={bloodGroup}
+                      onChange={setBloodGroup}
+                    />
+                  )}
                   <RoleToggle value={role} onChange={setRole} />
                 </div>
 
-                <LocationInput value={location} onChange={setLocation} />
+                {role === "hospital" && (
+                  <HospitalFields
+                    hospitalName={hospitalName}
+                    onHospitalNameChange={setHospitalName}
+                    registrationNumber={registrationNumber}
+                    onRegistrationNumberChange={setRegistrationNumber}
+                    licenseNumber={licenseNumber}
+                    onLicenseNumberChange={setLicenseNumber}
+                    gstNumber={gstNumber}
+                    onGstNumberChange={setGstNumber}
+                    hospitalAddress={hospitalAddress}
+                    onHospitalAddressChange={setHospitalAddress}
+                    hospitalEmail={hospitalEmail}
+                    onHospitalEmailChange={setHospitalEmail}
+                    hospitalPhone={hospitalPhone}
+                    onHospitalPhoneChange={setHospitalPhone}
+                    documentFile={documentFile}
+                    onDocumentFileChange={setDocumentFile}
+                  />
+                )}
+
+                {role !== "hospital" && (
+                  <LocationInput value={location} onChange={setLocation} />
+                )}
 
                 {/* Back & Submit Buttons */}
                 <div className="pt-6 space-y-4">
@@ -241,11 +343,11 @@ const RegisterPage = () => {
                         <span className="material-symbols-outlined animate-spin">
                           progress_activity
                         </span>
-                        Creating Account...
+                        {role === "hospital" ? "Verifying & Creating..." : "Creating Account..."}
                       </>
                     ) : (
                       <>
-                        Create Account
+                        {role === "hospital" ? "Register Hospital" : "Create Account"}
                         <span className="material-symbols-outlined">
                           arrow_forward
                         </span>

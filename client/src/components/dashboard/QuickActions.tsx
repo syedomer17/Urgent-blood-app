@@ -12,7 +12,7 @@ const QuickActions = ({ user, onToggleAvailability }: QuickActionsProps) => {
 
   return (
     <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {user.role === "requester" || user.role === "admin" ? (
+      {user.role === "requester" || user.role === "hospital" || user.role === "admin" ? (
         <button
           onClick={() => navigate("/create-request")}
           className="bg-signature-gradient text-white rounded-xl py-4 px-6 font-bold flex items-center justify-center gap-3 active:scale-95 transition-transform"
