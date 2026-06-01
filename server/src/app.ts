@@ -35,7 +35,7 @@ app.use(helmet());
 
 // Enable CORS
 app.use(cors({
-    origin: config.cors.origin,
+    origin: [config.cors.origin, 'capacitor://localhost', 'ionic://localhost',"http://localhost"], // Allow localhost for mobile app development
     credentials: true
 }));
 
