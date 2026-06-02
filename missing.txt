@@ -83,6 +83,48 @@ Missing
 - Blood inventory management section
 - Dashboard widgets for pending, accepted, fulfilled, and expired requests
 
+Requestor Dashboard Feature Gap Checklist
+
+Present
+- Personal details
+- Create blood request flow
+- Patient name field
+- Blood group field
+- Units needed field
+- Hospital field
+- Location field
+- Urgency level field
+- Supporting document upload
+- Doctor prescription upload/verification
+- Blood requirement report upload/verification
+- Hospital document upload/verification
+- View matched donors
+- Chat with donor
+- Call donor
+- Receive updates
+- Mark request as critical
+
+Partial
+- Verification status
+- Request tracking for pending requests
+- Request tracking for active requests
+- Request tracking for fulfilled requests
+- Acceptance status for matched donors
+- ETA display for matched donors
+- Admin review for emergency boost requests
+- Priority notifications for critical requests
+
+Missing
+- Request tracking for expired requests
+- Separate request status timeline view
+- Requester-side donor acceptance history
+- Dedicated emergency boost review dashboard
+- Request-level communication inbox
+
+Notes
+- Request creation, document verification, donor matching, chat, and donor contact actions already exist across the requester pages.
+- Request expiry storage exists, but the requester dashboard does not yet expose a full expired/active timeline view.
+
 Donor Dashboard Feature Gap Checklist
 
 Present

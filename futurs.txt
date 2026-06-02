@@ -1,0 +1,62 @@
+Admin Dashboard Present Features
+- Total donors and active donors stats
+- Blood requests today, emergency requests, fulfilled requests, and completed donations stats
+- Donor list with account status actions
+- Request list and request moderation actions
+- Hospital verification review
+- Pending verification queue
+- Emergency alert broadcast form
+- Blood group and request filters
+- Reports page data
+- Audit logs
+- Quick links to requests, donors, and verifications
+
+Hospital Dashboard Present Features
+- Hospital profile details and verification status
+- Hospital license, registration, and contact details
+- Create blood request flow for hospital users
+- Emergency request expiry time on request creation
+- Nearby donor search entry point
+- Donor availability and blood group filtering
+- Donor last donation date filtering
+- Request tracking for pending, accepted, fulfilled, and expired requests
+- Estimated blood inventory by blood group
+- Low stock alerts
+- Request success rate summary
+- Quick access to donor panel and request list
+
+Donor Dashboard Present Features
+- Personal profile summary
+- Blood group, trust rating, and donation stats
+- Availability toggle
+- Compatible blood request feed
+- Nearby request browsing
+- Accept request action
+- Donation history summary
+- Donation certificates download view
+- Hospitals helped section
+- Public leaderboard view
+- Badge and milestone progress
+- Age, weight, and medical condition eligibility info
+- Donation reminder scheduling
+- Eligibility warnings and not-eligible cards
+- Live emergency and request inbox
+- Donation center recommendation
+- Quick links to profile and request pages
+
+Requestor Dashboard Present Features
+- Personal details header
+- Create blood request form
+- Patient name, blood group, units needed, hospital, location, urgency level, and notes
+- Supporting document upload and AI verification
+- Doctor prescription verification
+- Blood requirement report upload/verification
+- Hospital document upload/verification
+- Request tracking summary for pending, accepted, and fulfilled requests
+- View matched donors for own requests
+- Donor contact actions from the matching panel
+- Chat with donor support
+- Call donor support
+- Live updates and donor matching notifications
+- Critical request urgency option
+- Access to nearby donors page

@@ -19,4 +19,14 @@ export const createRequestSchema = Joi.object({
     }).required(),
     contactNumber: Joi.string().required(),
     notes: Joi.string().optional().allow(''),
+       documentVerification: Joi.object({
+           isVerified: Joi.boolean().required(),
+           confidence: Joi.number().min(0).max(1).optional(),
+           hospitalName: Joi.string().allow('', null).optional(),
+           documentType: Joi.string().allow('', null).optional(),
+           patientName: Joi.string().allow('', null).optional(),
+           bloodGroup: Joi.string().allow('', null).optional(),
+           details: Joi.string().allow('', null).optional(),
+           flags: Joi.array().items(Joi.string()).optional(),
+       }).optional(),
 });

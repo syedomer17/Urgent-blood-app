@@ -52,9 +52,10 @@ exports.createRequest = (0, catchAsync_1.catchAsync)(async (req, res) => {
     if (hospitalName) {
         const user = req.user;
         const isAdmin = user?.role === 'admin';
-        const isRequesterVerified = (user?.role === 'requester' || user?.role === 'hospital') && Boolean(user?.isVerified);
-        if (!isAdmin && !isRequesterVerified) {
-            return res.status(http_status_codes_1.StatusCodes.FORBIDDEN).json({ success: false, message: 'Only verified hospitals or admins can create requests mentioning a hospital.' });
+        const isVerifiedHospital = user?.role === 'hospital' && Boolean(user?.isVerified);
+        const isVerifiedRequester = user?.role === 'requester' && (Boolean(user?.isVerified) || Boolean(req.body?.documentVerification?.isVerified));
+        if (!isAdmin && !isVerifiedHospital && !isVerifiedRequester) {
+            return res.status(http_status_codes_1.StatusCodes.FORBIDDEN).json({ success: false, message: 'Only verified hospitals, verified requesters, or admins can create requests mentioning a hospital.' });
         }
     }
     const request = await requestService.createRequest(req.user._id.toString(), req.body);

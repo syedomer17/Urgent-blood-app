@@ -60,7 +60,7 @@ const verifyHospitalDocument = async (filePath, mimeType) => {
             };
         }
         const genAI = new generative_ai_1.GoogleGenerativeAI(env_1.config.gemini.apiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
         const fileBuffer = fs_1.default.readFileSync(filePath);
         const base64Data = fileBuffer.toString('base64');
         const result = await model.generateContent([

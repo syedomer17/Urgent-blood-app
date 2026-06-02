@@ -27,6 +27,8 @@ interface VerificationResult {
   flags: string[];
 }
 
+const normalizeConfidence = (value: number) => (value > 1 ? value / 100 : value);
+
 const CreateRequestPage = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -88,7 +90,11 @@ const CreateRequestPage = () => {
       const data = await res.json();
       if (!res.ok) { toast.error(data.message || "Verification failed."); return; }
 
-      const result: VerificationResult = data.data.verification;
+      const rawResult = data.data.verification as VerificationResult;
+      const result: VerificationResult = {
+        ...rawResult,
+        confidence: normalizeConfidence(Number(rawResult.confidence) || 0),
+      };
       setVerification(result);
 
       if (result.isVerified) {
@@ -144,6 +150,10 @@ const CreateRequestPage = () => {
 
     setLoading(true);
     try {
+      const normalizedVerification = verification
+        ? { ...verification, confidence: normalizeConfidence(Number(verification.confidence) || 0) }
+        : null;
+
       const res = await fetch("/api/v1/requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -158,6 +168,7 @@ const CreateRequestPage = () => {
           expiresAt: expiresAt ? new Date(expiresAt).toISOString() : undefined,
           contactNumber: contactNumber.trim(),
           notes: notes.trim() || undefined,
+          documentVerification: normalizedVerification,
           location: Object.keys(location).length > 0 ? location : undefined,
         }),
       });

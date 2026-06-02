@@ -1,18 +1,8 @@
 import express from 'express';
-import { rateLimit } from 'express-rate-limit';
 import * as donorsController from './donors.controller';
 import { protect } from '../../middlewares/auth';
 
 const router = express.Router();
-
-// Stricter rate limit for /near — geospatial queries are heavier
-const nearLimiter = rateLimit({
-    windowMs: 60 * 1000, // 1 minute
-    limit: 30,
-    standardHeaders: 'draft-7',
-    legacyHeaders: false,
-    message: { success: false, message: 'Too many nearby-search requests. Please try again in a minute.' },
-});
 
 /**
  * @swagger
@@ -66,9 +56,9 @@ router.get('/', protect, donorsController.getAllDonors);
  *       429:
  *         description: Rate limit exceeded
  */
-router.get('/near', protect, nearLimiter, donorsController.getNearbyDonors);
+router.get('/near', protect, donorsController.getNearbyDonors);
 
 // Search donors by city name (geocoded on server)
-router.get('/search', protect, nearLimiter, donorsController.searchDonorsByCity);
+router.get('/search', protect, donorsController.searchDonorsByCity);
 
 export default router;

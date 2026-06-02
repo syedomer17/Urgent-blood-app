@@ -23,4 +23,14 @@ exports.createRequestSchema = joi_1.default.object({
     }).required(),
     contactNumber: joi_1.default.string().required(),
     notes: joi_1.default.string().optional().allow(''),
+    documentVerification: joi_1.default.object({
+        isVerified: joi_1.default.boolean().required(),
+        confidence: joi_1.default.number().min(0).max(1).optional(),
+        hospitalName: joi_1.default.string().allow('', null).optional(),
+        documentType: joi_1.default.string().allow('', null).optional(),
+        patientName: joi_1.default.string().allow('', null).optional(),
+        bloodGroup: joi_1.default.string().allow('', null).optional(),
+        details: joi_1.default.string().allow('', null).optional(),
+        flags: joi_1.default.array().items(joi_1.default.string()).optional(),
+    }).optional(),
 });

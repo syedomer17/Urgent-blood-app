@@ -47,6 +47,7 @@ const HospitalFields = ({
 }: HospitalFieldsProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [addressLoading, setAddressLoading] = useState(false);
 
   const handleFile = useCallback(
     (file: File | undefined) => {
@@ -85,6 +86,36 @@ const HospitalFields = ({
     },
     [handleFile]
   );
+
+  const handleUseMyLocation = useCallback(() => {
+    if (!navigator.geolocation || addressLoading) return;
+
+    setAddressLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const latitude = pos.coords.latitude;
+        const longitude = pos.coords.longitude;
+
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
+            { headers: { "Accept-Language": "en" } }
+          );
+          const data = await response.json();
+          const address = data.display_name ?? `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+          onHospitalAddressChange(address);
+        } catch {
+          onHospitalAddressChange(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+        } finally {
+          setAddressLoading(false);
+        }
+      },
+      () => {
+        setAddressLoading(false);
+      },
+      { timeout: 10000, maximumAge: 60000 }
+    );
+  }, [addressLoading, onHospitalAddressChange]);
 
   const isImage = documentFile?.type.startsWith("image/");
   const previewUrl = documentFile && isImage ? URL.createObjectURL(documentFile) : null;
@@ -126,9 +157,19 @@ const HospitalFields = ({
       </div>
 
       <div className="flex flex-col gap-2">
-        <label className="text-xs font-bold font-headline text-secondary uppercase px-1">
-          Hospital Address
-        </label>
+        <div className="flex items-center justify-between gap-3 px-1">
+          <label className="text-xs font-bold font-headline text-secondary uppercase">
+            Hospital Address
+          </label>
+          <button
+            type="button"
+            onClick={handleUseMyLocation}
+            disabled={addressLoading}
+            className="text-xs font-bold text-primary hover:underline transition-all disabled:opacity-60"
+          >
+            {addressLoading ? "Detecting..." : "Use my location"}
+          </button>
+        </div>
         <textarea
           placeholder="Full hospital address including city, state, and PIN code"
           value={hospitalAddress}

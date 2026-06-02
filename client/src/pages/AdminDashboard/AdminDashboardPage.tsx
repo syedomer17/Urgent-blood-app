@@ -16,6 +16,52 @@ interface AdminDashboardPageProps {
 type UserFilter = "all" | "donor" | "requester" | "hospital" | "admin";
 type RequestFilter = "all" | "pending" | "accepted" | "fulfilled" | "cancelled";
 
+function getAccountStatusTone(status?: string) {
+  switch (status) {
+    case "blocked":
+      return "bg-red-100 text-red-700";
+    case "suspended":
+      return "bg-amber-100 text-amber-800";
+    default:
+      return "bg-green-100 text-green-700";
+  }
+}
+
+function getRequestStatusTone(status?: string) {
+  switch (status) {
+    case "fulfilled":
+      return "bg-green-100 text-green-700";
+    case "accepted":
+      return "bg-blue-100 text-blue-700";
+    case "cancelled":
+      return "bg-gray-100 text-gray-600";
+    default:
+      return "bg-amber-100 text-amber-800";
+  }
+}
+
+function prettyStatus(status?: string) {
+  return (status || "active").replace(/_/g, " ");
+}
+
+function formatAuditMetadata(metadata?: Record<string, unknown>) {
+  if (!metadata) return [];
+
+  const preferredOrder = ["reason", "message", "bloodGroup", "region", "role", "email", "patientName", "createdBy"];
+  const entries = Object.entries(metadata).filter(([, value]) => value !== undefined && value !== null && value !== "");
+
+  entries.sort(([leftKey], [rightKey]) => {
+    const leftIndex = preferredOrder.indexOf(leftKey);
+    const rightIndex = preferredOrder.indexOf(rightKey);
+    if (leftIndex === -1 && rightIndex === -1) return leftKey.localeCompare(rightKey);
+    if (leftIndex === -1) return 1;
+    if (rightIndex === -1) return -1;
+    return leftIndex - rightIndex;
+  });
+
+  return entries.slice(0, 5).map(([key, value]) => ({ key, value: String(value) }));
+}
+
 const apiGet = async <T,>(url: string): Promise<T> => {
   const res = await fetch(url, { credentials: "include" });
   if (!res.ok) {
@@ -74,6 +120,8 @@ const AdminDashboardPage = ({ user }: AdminDashboardPageProps) => {
     if (requestFilter === "all") return requests;
     return requests.filter((entry) => entry.status === requestFilter);
   }, [requests, requestFilter]);
+
+  const visibleAuditLogs = useMemo(() => auditLogs.slice(0, 3), [auditLogs]);
 
   const refreshSection = async () => {
     await loadData();
@@ -153,18 +201,19 @@ const AdminDashboardPage = ({ user }: AdminDashboardPageProps) => {
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8">
-      <section className="rounded-3xl bg-linear-to-br from-primary to-primary-container text-white p-6 sm:p-8 shadow-[0_20px_60px_rgba(183,28,28,0.18)]">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-3 max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-bold uppercase tracking-widest">
+      <section className="relative overflow-hidden rounded-4xl border border-[#f2d7d3] bg-[radial-gradient(circle_at_top_left,rgba(183,28,28,0.16),transparent_38%),linear-gradient(135deg,#fff8f6_0%,#ffffff_55%,#fff4f1_100%)] p-6 sm:p-8 shadow-[0_20px_60px_rgba(183,28,28,0.08)]">
+        <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-primary/10 blur-3xl" />
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-4 max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/85 px-3 py-1 text-xs font-bold uppercase tracking-widest text-primary shadow-sm ring-1 ring-[#f2d7d3]">
               <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>
                 admin_panel_settings
               </span>
               Admin Control Center
             </div>
             <div>
-              <h2 className="font-headline text-3xl sm:text-4xl font-black tracking-tight">{user.name}</h2>
-              <p className="mt-2 text-white/80 text-sm sm:text-base max-w-2xl">
+              <h2 className="font-headline text-3xl sm:text-5xl font-black tracking-tight text-on-surface">{user.name}</h2>
+              <p className="mt-3 text-secondary text-sm sm:text-base max-w-2xl">
                 Manage users, moderate requests, broadcast emergency alerts, and review audit activity from one dashboard.
               </p>
             </div>
@@ -172,9 +221,9 @@ const AdminDashboardPage = ({ user }: AdminDashboardPageProps) => {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full lg:w-auto">
             {statCards.slice(0, 3).map((item) => (
-              <div key={item.label} className="rounded-2xl bg-white/10 p-3 backdrop-blur-sm">
-                <div className="text-[10px] uppercase tracking-widest text-white/70 font-bold">{item.label}</div>
-                <div className="mt-1 text-2xl font-black">{item.value}</div>
+              <div key={item.label} className="rounded-2xl border border-white/70 bg-white/85 p-4 backdrop-blur-sm shadow-sm">
+                <div className="text-[10px] uppercase tracking-widest text-secondary font-bold">{item.label}</div>
+                <div className="mt-1 text-2xl font-black text-on-surface">{item.value}</div>
               </div>
             ))}
           </div>
@@ -183,7 +232,7 @@ const AdminDashboardPage = ({ user }: AdminDashboardPageProps) => {
 
       <section className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         {statCards.map((item) => (
-          <div key={item.label} className="bg-surface-container-lowest p-5 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] flex flex-col gap-2">
+          <div key={item.label} className="bg-surface-container-lowest p-5 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] flex flex-col gap-2 border border-outline-variant/10">
             <span className="text-secondary font-semibold text-xs uppercase tracking-wider">{item.label}</span>
             <span className="text-3xl font-headline font-black text-on-surface">{item.value}</span>
           </div>
@@ -191,7 +240,7 @@ const AdminDashboardPage = ({ user }: AdminDashboardPageProps) => {
       </section>
 
       <section className="grid grid-cols-1 xl:grid-cols-[1.3fr_0.9fr] gap-6">
-        <div className="bg-surface-container-lowest rounded-3xl p-5 sm:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.04)] space-y-5">
+        <div className="bg-surface-container-lowest rounded-4xl p-5 sm:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.04)] space-y-5 border border-outline-variant/10">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="font-headline font-bold text-xl">User Management</h3>
@@ -214,21 +263,21 @@ const AdminDashboardPage = ({ user }: AdminDashboardPageProps) => {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-outline-variant/10">
+          <div className="overflow-hidden rounded-2xl border border-outline-variant/10 bg-white">
             {filteredUsers.length === 0 ? (
               <div className="p-8 text-center text-secondary">No users found.</div>
             ) : (
               <div className="divide-y divide-outline-variant/10">
                 {filteredUsers.map((entry) => (
-                  <div key={entry._id} className="grid grid-cols-1 gap-4 p-4 md:grid-cols-[1.4fr_0.8fr_auto] md:items-center">
+                  <div key={entry._id} className="grid grid-cols-1 gap-4 p-4 md:grid-cols-[1.4fr_0.8fr_auto] md:items-center hover:bg-surface-container-low/50 transition-colors">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="font-bold text-on-surface truncate">{entry.name}</p>
                         <span className="rounded-full bg-surface-container-high px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-secondary">
                           {entry.role}
                         </span>
-                        <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest ${entry.accountStatus === "blocked" ? "bg-red-100 text-red-700" : entry.accountStatus === "suspended" ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-700"}`}>
-                          {entry.accountStatus || "active"}
+                        <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest ${getAccountStatusTone(entry.accountStatus)}`}>
+                          {prettyStatus(entry.accountStatus)}
                         </span>
                       </div>
                       <p className="text-sm text-secondary truncate">{entry.email}</p>
@@ -240,13 +289,25 @@ const AdminDashboardPage = ({ user }: AdminDashboardPageProps) => {
                     </div>
 
                     <div className="flex flex-wrap gap-2 justify-start md:justify-end">
-                      <button onClick={() => updateUserStatus(entry._id, "activate")} className="rounded-xl bg-green-600 px-3 py-2 text-sm font-bold text-white">
+                      <button
+                        onClick={() => updateUserStatus(entry._id, "activate")}
+                        disabled={(entry.accountStatus || "active") === "active"}
+                        className="rounded-xl bg-green-600 px-3 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      >
                         Activate
                       </button>
-                      <button onClick={() => updateUserStatus(entry._id, "suspend")} className="rounded-xl bg-amber-600 px-3 py-2 text-sm font-bold text-white">
+                      <button
+                        onClick={() => updateUserStatus(entry._id, "suspend")}
+                        disabled={entry.accountStatus === "suspended"}
+                        className="rounded-xl bg-amber-600 px-3 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      >
                         Suspend
                       </button>
-                      <button onClick={() => updateUserStatus(entry._id, "block")} className="rounded-xl bg-red-600 px-3 py-2 text-sm font-bold text-white">
+                      <button
+                        onClick={() => updateUserStatus(entry._id, "block")}
+                        disabled={entry.accountStatus === "blocked"}
+                        className="rounded-xl bg-red-600 px-3 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      >
                         Block
                       </button>
                     </div>
@@ -258,7 +319,7 @@ const AdminDashboardPage = ({ user }: AdminDashboardPageProps) => {
         </div>
 
         <div className="space-y-6">
-          <section className="bg-surface-container-lowest rounded-3xl p-5 sm:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.04)] space-y-4">
+          <section className="bg-surface-container-lowest rounded-4xl p-5 sm:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.04)] space-y-4 border border-outline-variant/10">
             <div>
               <h3 className="font-headline font-bold text-xl">Emergency Alerts</h3>
               <p className="text-sm text-secondary">Broadcast region-specific alerts to compatible donors.</p>
@@ -297,13 +358,13 @@ const AdminDashboardPage = ({ user }: AdminDashboardPageProps) => {
                   className="w-full rounded-2xl border border-outline-variant/20 bg-white px-4 py-3 text-on-surface outline-none"
                 />
               </label>
-              <button onClick={sendEmergencyAlert} className="rounded-2xl bg-signature-gradient px-4 py-3 font-bold text-white">
+              <button onClick={sendEmergencyAlert} className="rounded-2xl bg-signature-gradient px-4 py-3 font-bold text-white shadow-lg shadow-primary/20">
                 Send Emergency Alert
               </button>
             </div>
           </section>
 
-          <section className="bg-surface-container-lowest rounded-3xl p-5 sm:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.04)] space-y-4">
+          <section className="bg-surface-container-lowest rounded-4xl p-5 sm:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.04)] space-y-4 border border-outline-variant/10">
             <div>
               <h3 className="font-headline font-bold text-xl">Quick Links</h3>
               <p className="text-sm text-secondary">Open verification review or create new requests.</p>
@@ -326,7 +387,7 @@ const AdminDashboardPage = ({ user }: AdminDashboardPageProps) => {
         </div>
       </section>
 
-      <section className="bg-surface-container-lowest rounded-3xl p-5 sm:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.04)] space-y-5">
+      <section className="bg-surface-container-lowest rounded-4xl p-5 sm:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.04)] space-y-5 border border-outline-variant/10">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="font-headline font-bold text-xl">Blood Request Moderation</h3>
@@ -362,11 +423,11 @@ const AdminDashboardPage = ({ user }: AdminDashboardPageProps) => {
                       <span className="rounded-full bg-primary-fixed px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-primary">
                         {requestItem.bloodGroup}
                       </span>
-                      <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest ${requestItem.urgency === "critical" ? "bg-red-100 text-red-700" : "bg-surface-container-high text-secondary"}`}>
-                        {requestItem.urgency}
+                      <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest ${requestItem.urgency === "critical" ? "bg-red-100 text-red-700" : requestItem.urgency === "high" ? "bg-orange-100 text-orange-700" : requestItem.urgency === "medium" ? "bg-amber-100 text-amber-800" : "bg-surface-container-high text-secondary"}`}>
+                          {requestItem.urgency}
                       </span>
-                      <span className="rounded-full bg-surface-container-high px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-secondary">
-                        {requestItem.status}
+                        <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest ${getRequestStatusTone(requestItem.status)}`}>
+                          {prettyStatus(requestItem.status)}
                       </span>
                     </div>
                     <p className="text-sm text-secondary truncate">
@@ -378,25 +439,29 @@ const AdminDashboardPage = ({ user }: AdminDashboardPageProps) => {
                   <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => updateRequestStatus(requestItem._id, "approve-emergency")}
-                      className="rounded-xl bg-green-600 px-3 py-2 text-sm font-bold text-white"
+                      disabled={requestItem.status !== "pending"}
+                      className="rounded-xl bg-green-600 px-3 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Approve Emergency
                     </button>
                     <button
                       onClick={() => updateRequestStatus(requestItem._id, "reject-emergency", { reason: "Rejected by admin" })}
-                      className="rounded-xl bg-amber-600 px-3 py-2 text-sm font-bold text-white"
+                      disabled={requestItem.status !== "pending"}
+                      className="rounded-xl bg-amber-600 px-3 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Reject Emergency
                     </button>
                     <button
                       onClick={() => updateRequestStatus(requestItem._id, "fulfill")}
-                      className="rounded-xl bg-primary px-3 py-2 text-sm font-bold text-white"
+                      disabled={requestItem.status === "fulfilled" || requestItem.status === "cancelled"}
+                      className="rounded-xl bg-primary px-3 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Mark Fulfilled
                     </button>
                     <button
                       onClick={() => updateRequestStatus(requestItem._id, "cancel", { reason: "Cancelled by admin" })}
-                      className="rounded-xl bg-red-600 px-3 py-2 text-sm font-bold text-white"
+                      disabled={requestItem.status === "cancelled"}
+                      className="rounded-xl bg-red-600 px-3 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Cancel Fraudulent
                     </button>
@@ -409,7 +474,7 @@ const AdminDashboardPage = ({ user }: AdminDashboardPageProps) => {
       </section>
 
       <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <div className="bg-surface-container-lowest rounded-3xl p-5 sm:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.04)] space-y-4">
+        <div className="bg-surface-container-lowest rounded-4xl p-5 sm:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.04)] space-y-4 border border-outline-variant/10">
           <div>
             <h3 className="font-headline font-bold text-xl">Reports</h3>
             <p className="text-sm text-secondary">Donation history, hospital activity, and request fulfillment summaries.</p>
@@ -468,21 +533,32 @@ const AdminDashboardPage = ({ user }: AdminDashboardPageProps) => {
             {auditLogs.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-outline-variant/20 p-8 text-center text-secondary">No audit logs yet.</div>
             ) : (
-              auditLogs.map((log) => (
-                <div key={log._id} className="rounded-2xl bg-white p-4 ring-1 ring-outline-variant/10 space-y-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="font-bold text-on-surface truncate">{log.action}</p>
-                    <span className="text-xs text-secondary">{new Date(log.createdAt).toLocaleString()}</span>
+              visibleAuditLogs.map((log) => (
+                <div key={log._id} className="rounded-2xl bg-white p-4 ring-1 ring-outline-variant/10 space-y-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="space-y-1 min-w-0">
+                      <p className="font-bold text-on-surface truncate">{log.action}</p>
+                      <p className="text-sm text-secondary">
+                        {log.targetType}
+                        {log.actorId?.name ? ` · by ${log.actorId.name}` : ""}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-surface-container-low px-2.5 py-1 text-xs font-semibold text-secondary">
+                      {new Date(log.createdAt).toLocaleString()}
+                    </span>
                   </div>
-                  <p className="text-sm text-secondary">
-                    {log.targetType}
-                    {log.actorId?.name ? ` · by ${log.actorId.name}` : ""}
-                  </p>
-                  {log.metadata && (
-                    <pre className="overflow-auto rounded-xl bg-surface-container-low p-3 text-[11px] text-secondary">
-                      {JSON.stringify(log.metadata, null, 2)}
-                    </pre>
-                  )}
+                  <div className="flex flex-wrap gap-2">
+                    {formatAuditMetadata(log.metadata).length > 0 ? (
+                      formatAuditMetadata(log.metadata).map((item) => (
+                        <div key={`${log._id}-${item.key}`} className="rounded-xl bg-surface-container-low px-3 py-2 text-xs text-secondary">
+                          <span className="font-bold uppercase tracking-widest text-secondary/70">{item.key}</span>
+                          <div className="mt-0.5 max-w-65 truncate font-medium text-on-surface">{item.value}</div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="rounded-xl bg-surface-container-low px-3 py-2 text-xs text-secondary">No metadata recorded</div>
+                    )}
+                  </div>
                 </div>
               ))
             )}
