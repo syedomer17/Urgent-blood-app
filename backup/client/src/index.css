@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #91000a;
+  --color-primary-container: #b71c1c;
+  --color-primary-fixed: #ffdad6;
+  --color-primary-fixed-dim: #ffb4ab;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #ffcac4;
+  --color-on-primary-fixed: #410002;
+  --color-on-primary-fixed-variant: #93000b;
+
+  --color-secondary: #4c616c;
+  --color-secondary-container: #cfe6f2;
+  --color-secondary-fixed: #cfe6f2;
+  --color-secondary-fixed-dim: #b4cad6;
+  --color-on-secondary: #ffffff;
+  --color-on-secondary-container: #526772;
+  --color-on-secondary-fixed: #071e27;
+  --color-on-secondary-fixed-variant: #354a53;
+
+  --color-tertiary: #00487d;
+  --color-tertiary-container: #0060a4;
+  --color-tertiary-fixed: #d2e4ff;
+  --color-tertiary-fixed-dim: #a0caff;
+  --color-on-tertiary: #ffffff;
+  --color-on-tertiary-container: #bed9ff;
+  --color-on-tertiary-fixed: #001c37;
+  --color-on-tertiary-fixed-variant: #00497e;
+
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error: #ffffff;
+  --color-on-error-container: #93000a;
+
+  --color-surface: #f9f9fb;
+  --color-surface-dim: #d9dadc;
+  --color-surface-bright: #f9f9fb;
+  --color-surface-tint: #b91d1d;
+  --color-surface-variant: #e2e2e4;
+  --color-surface-container: #eeeef0;
+  --color-surface-container-low: #f3f3f5;
+  --color-surface-container-high: #e8e8ea;
+  --color-surface-container-highest: #e2e2e4;
+  --color-surface-container-lowest: #ffffff;
+
+  --color-on-surface: #1a1c1d;
+  --color-on-surface-variant: #5b403d;
+  --color-on-background: #1a1c1d;
+  --color-background: #f9f9fb;
+
+  --color-outline: #8f706c;
+  --color-outline-variant: #e4beb9;
+
+  --color-inverse-surface: #2f3132;
+  --color-inverse-on-surface: #f0f0f2;
+  --color-inverse-primary: #ffb4ab;
+
+  --font-headline: "Manrope", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-label: "Inter", sans-serif;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+.bg-signature-gradient {
+  background: linear-gradient(135deg, #b71c1c 0%, #91000a 100%);
+}
