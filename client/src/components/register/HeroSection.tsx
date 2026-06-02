@@ -7,12 +7,7 @@ const HeroSection = () => {
 
       <div className="relative z-10">
         <div className="flex items-center gap-2 mb-12">
-          <span
-            className="material-symbols-outlined text-white text-4xl"
-            style={{ fontVariationSettings: "'FILL' 1" }}
-          >
-            bloodtype
-          </span>
+          <img src="/blood.png" alt="LifeLink Logo" className="w-10 h-10 object-contain" />
           <h1 className="font-headline font-black text-3xl tracking-tighter text-white">
             LifeLink
           </h1>

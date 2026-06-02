@@ -5,8 +5,9 @@ interface TopAppBarProps {
 const TopAppBar = ({ onLogout }: TopAppBarProps) => {
   return (
     <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl shadow-sm flex justify-between items-center px-6 h-16">
-      <div className="flex items-center gap-4">
-        <h1 className="text-2xl font-black tracking-tighter text-red-700 font-headline">
+      <div className="flex items-center gap-2">
+        <img src="/blood.png" alt="LifeLink Logo" className="w-8 h-8 object-contain" />
+        <h1 className="text-xl font-black tracking-tighter text-red-700 font-headline">
           LifeLink
         </h1>
       </div>

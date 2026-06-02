@@ -10,13 +10,8 @@ const SplashView = ({ onLoginClick }: SplashViewProps) => {
       {/* Logo & Brand Identity */}
       <div className="flex flex-col items-center text-center space-y-6">
         <div className="w-24 h-24 rounded-3xl bg-white shadow-2xl flex items-center justify-center p-1">
-          <div className="w-full h-full rounded-[20px] bg-gradient-to-br from-primary-container to-primary flex items-center justify-center">
-            <span
-              className="material-symbols-outlined text-white text-5xl"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              bloodtype
-            </span>
+          <div className="w-full h-full rounded-[20px] bg-white flex items-center justify-center overflow-hidden">
+            <img src="/blood.png" alt="LifeLink Logo" className="w-full h-full object-contain p-2" />
           </div>
         </div>
         <div className="space-y-2">
