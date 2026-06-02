@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import toast from "react-hot-toast";
 import type { BloodRequest, User } from "../../types";
 import { canDonateTo } from "../../utils/bloodCompatibility";
+import { API_BASE_URL } from "../../utils/apiConfig";
 
 interface RequestsPageProps {
   user: User;
@@ -73,7 +74,7 @@ function DonorMatchPanel({ requestId, requestBloodGroup, viewerRole }: { request
   const fetchMatches = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/v1/requests/${requestId}/matches`, { credentials: "include" });
+      const res = await fetch(`${API_BASE_URL}/api/v1/requests/${requestId}/matches`, { credentials: "include" });
       const data = await res.json();
       if (res.ok) setDonors(data.data ?? []);
       else toast.error(data.message ?? "Failed to load matching donors.");
@@ -312,7 +313,7 @@ const RequestsPage = ({ user }: RequestsPageProps) => {
 
   const fetchRequests = async () => {
     try {
-      const res = await fetch("/api/v1/requests", { credentials: "include" });
+      const res = await fetch(`${API_BASE_URL}/api/v1/requests`, { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
         setRequests(data.data?.requests ?? data.data ?? []);
@@ -328,7 +329,7 @@ const RequestsPage = ({ user }: RequestsPageProps) => {
 
   const handleAccept = async (requestId: string) => {
     try {
-      const res = await fetch("/api/v1/donations/accept", {
+      const res = await fetch(`${API_BASE_URL}/api/v1/donations/accept`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

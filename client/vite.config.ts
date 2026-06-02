@@ -8,11 +8,11 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:9000',
+        target: 'https://blood.syedomer.me',
         changeOrigin: true,
       },
       '/socket.io': {
-        target: 'http://localhost:9000',
+        target: 'https://blood.syedomer.me',
         changeOrigin: true,
         ws: true,
       },

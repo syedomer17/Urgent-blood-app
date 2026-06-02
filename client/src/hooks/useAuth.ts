@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import type { User } from "../types";
+import { API_BASE_URL } from "../utils/apiConfig";
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -7,7 +8,7 @@ export const useAuth = () => {
 
   const fetchProfile = useCallback(async () => {
     try {
-      const res = await fetch("/api/v1/users/profile", {
+      const res = await fetch(`${API_BASE_URL}/api/v1/users/profile`, {
         credentials: "include",
       });
       if (!res.ok) {
@@ -28,7 +29,7 @@ export const useAuth = () => {
   }, [fetchProfile]);
 
   const logout = async () => {
-    await fetch("/api/v1/auth/logout", {
+    await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
       method: "POST",
       credentials: "include",
     });

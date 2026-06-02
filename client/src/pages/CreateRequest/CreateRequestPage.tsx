@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { API_BASE_URL } from "../../utils/apiConfig";
 import LocationPicker from "../../components/location/LocationPicker";
 import type { LocationData } from "../../components/location/LocationPicker";
 
@@ -82,7 +83,7 @@ const CreateRequestPage = () => {
     try {
       const formData = new FormData();
       formData.append("document", selectedFile);
-      const res = await fetch("/api/v1/requests/verify-document?type=prescription", {
+      const res = await fetch(`${API_BASE_URL}/api/v1/requests/verify-document?type=prescription`, {
         method: "POST",
         credentials: "include",
         body: formData,
@@ -154,7 +155,7 @@ const CreateRequestPage = () => {
         ? { ...verification, confidence: normalizeConfidence(Number(verification.confidence) || 0) }
         : null;
 
-      const res = await fetch("/api/v1/requests", {
+      const res = await fetch(`${API_BASE_URL}/api/v1/requests`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

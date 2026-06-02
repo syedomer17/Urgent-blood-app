@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
+import { API_BASE_URL } from "../../utils/apiConfig";
 
 interface LoginFormProps {
   onBack: () => void;
@@ -25,7 +26,7 @@ const LoginForm = ({ onBack }: LoginFormProps) => {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/v1/auth/login", {
+      const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

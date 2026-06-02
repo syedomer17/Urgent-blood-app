@@ -1,7 +1,6 @@
 import { Outlet } from "react-router-dom";
 import TopAppBar from "./TopAppBar";
 import BottomNavBar from "./BottomNavBar";
-import DonorMessages from "../chat/DonorMessages";
 import type { User } from "../../types";
 
 interface DashboardLayoutProps {
@@ -15,8 +14,7 @@ const DashboardLayout = ({ onLogout, user }: DashboardLayoutProps) => {
       <TopAppBar onLogout={onLogout} />
       <Outlet />
       <BottomNavBar user={user} />
-      {/* Global chat manager — available to all roles */}
-      <DonorMessages myId={user._id} />
+      {/* Chat disabled in this deployment */}
     </div>
   );
 };

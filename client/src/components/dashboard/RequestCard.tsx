@@ -1,5 +1,6 @@
 import toast from "react-hot-toast";
 import type { BloodRequest } from "../../types";
+import { API_BASE_URL } from "../../utils/apiConfig";
 
 interface RequestCardProps {
   request: BloodRequest;
@@ -40,7 +41,7 @@ const RequestCard = ({ request, userRole, onAccepted }: RequestCardProps) => {
 
   const handleAccept = async () => {
     try {
-      const res = await fetch("/api/v1/donations/accept", {
+      const res = await fetch(`${API_BASE_URL}/api/v1/donations/accept`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { API_BASE_URL } from "../../utils/apiConfig";
 import type {
   AdminAuditLog,
   AdminReports,
@@ -63,7 +64,7 @@ function formatAuditMetadata(metadata?: Record<string, unknown>) {
 }
 
 const apiGet = async <T,>(url: string): Promise<T> => {
-  const res = await fetch(url, { credentials: "include" });
+  const res = await fetch(`${API_BASE_URL}${url}`, { credentials: "include" });
   if (!res.ok) {
     throw new Error(url);
   }
@@ -128,7 +129,7 @@ const AdminDashboardPage = ({ user }: AdminDashboardPageProps) => {
   };
 
   const mutate = async (url: string, method: "PATCH" | "POST", body?: unknown, successMessage?: string) => {
-    const res = await fetch(url, {
+    const res = await fetch(`${API_BASE_URL}${url}`, {
       method,
       credentials: "include",
       headers: body ? { "Content-Type": "application/json" } : undefined,

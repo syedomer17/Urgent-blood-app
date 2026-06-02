@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import toast from "react-hot-toast";
+import { API_BASE_URL } from "../../utils/apiConfig";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -120,7 +121,7 @@ const DonorsPage = () => {
   useEffect(() => {
     const fetchDonors = async () => {
       try {
-        const res = await fetch("/api/v1/donors", { credentials: "include" });
+        const res = await fetch(`${API_BASE_URL}/api/v1/donors`, { credentials: "include" });
         if (res.ok) {
           const data = await res.json();
           setDonors(data.data?.donors ?? data.data ?? []);
@@ -141,7 +142,7 @@ const DonorsPage = () => {
     }
     setLoading(true);
     try {
-      const res = await fetch(`/api/v1/donors/search?city=${encodeURIComponent(cityFilter)}&radius=20000`, { credentials: 'include' });
+      const res = await fetch(`${API_BASE_URL}/api/v1/donors/search?city=${encodeURIComponent(cityFilter)}&radius=20000`, { credentials: 'include' });
       if (!res.ok) {
         const data = await res.json();
         toast.error(data.message || 'City search failed');
@@ -202,7 +203,7 @@ const DonorsPage = () => {
             className="bg-surface-container-lowest ring-1 ring-outline-variant/20 rounded-xl px-4 py-2.5 text-sm focus:ring-primary/50 focus:ring-2 transition-all outline-none"
           />
           <button onClick={searchByCity} className="bg-primary text-white px-4 py-2 rounded-xl font-bold">Search</button>
-          <button onClick={() => { setCityFilter(''); /* reload all donors */ setLoading(true); fetch('/api/v1/donors', { credentials: 'include' }).then(async res => { if (res.ok) { const data = await res.json(); setDonors(data.data?.donors ?? data.data ?? []); } }).catch(()=>toast.error('Failed to reload')).finally(()=>setLoading(false)); }} className="bg-surface-container-highest px-4 py-2 rounded-xl">Reset</button>
+          <button onClick={() => { setCityFilter(''); /* reload all donors */ setLoading(true); fetch(`${API_BASE_URL}/api/v1/donors`, { credentials: 'include' }).then(async res => { if (res.ok) { const data = await res.json(); setDonors(data.data?.donors ?? data.data ?? []); } }).catch(()=>toast.error('Failed to reload')).finally(()=>setLoading(false)); }} className="bg-surface-container-highest px-4 py-2 rounded-xl">Reset</button>
         </div>
       </div>
 
