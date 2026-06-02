@@ -8,15 +8,15 @@ import { config } from '../../config/env';
 // Cookie options for secure token storage
 const cookieOptions = {
     httpOnly: true,
-    secure: config.env === 'production',
-    sameSite: 'strict' as const,
+    secure: true, // Required for sameSite: 'none'
+    sameSite: 'none' as const,
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days for refresh token
 };
 
 const accessTokenCookieOptions = {
     httpOnly: true,
-    secure: config.env === 'production',
-    sameSite: 'strict' as const,
+    secure: true, // Required for sameSite: 'none'
+    sameSite: 'none' as const,
     maxAge: 24 * 60 * 60 * 1000, // 1 day for access token
 };
 
