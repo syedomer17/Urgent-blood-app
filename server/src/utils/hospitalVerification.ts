@@ -68,7 +68,7 @@ If all required fields exist and no issues are found → verificationStatus = "v
 Analyze the uploaded document and return the JSON response only.`;
 
 export const verifyHospitalDocument = async (
-    filePath: string,
+    fileBuffer: Buffer,
     mimeType: string
 ): Promise<HospitalVerificationResult> => {
     try {
@@ -79,7 +79,6 @@ export const verifyHospitalDocument = async (
             };
         }
 
-        const fileBuffer = fs.readFileSync(filePath);
         const base64Data = fileBuffer.toString('base64');
 
         const requestBody = {

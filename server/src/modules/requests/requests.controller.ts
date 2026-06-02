@@ -58,7 +58,6 @@ export const verifyDocument = catchAsync(async (req: Request, res: Response) => 
 
     const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
     if (!allowedMimes.includes(req.file.mimetype)) {
-        fs.unlinkSync(req.file.path);
         return res.status(StatusCodes.BAD_REQUEST).json({
             success: false,
             message: 'Invalid file type. Only JPG, PNG, WebP, and PDF files are allowed.',
@@ -67,7 +66,6 @@ export const verifyDocument = catchAsync(async (req: Request, res: Response) => 
 
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (req.file.size > maxSize) {
-        fs.unlinkSync(req.file.path);
         return res.status(StatusCodes.BAD_REQUEST).json({
             success: false,
             message: 'File too large. Maximum size is 10MB.',
@@ -75,19 +73,24 @@ export const verifyDocument = catchAsync(async (req: Request, res: Response) => 
     }
 
     try {
+        // Since we use Cloudinary storage, the file is already uploaded
+        // We need to fetch it to a buffer for Gemini AI verification
+        const response = await fetch(req.file.path);
+        const fileBuffer = Buffer.from(await response.arrayBuffer());
+
         // Determine document type: prescription (default for requests) or hospital (for hospital registration)
         const documentType = req.query.type === 'hospital' ? 'hospital' : 'prescription';
         
         const result = documentType === 'hospital' 
-            ? await verifyHospitalDocument(req.file.path, req.file.mimetype)
-            : await verifyPrescriptionDocument(req.file.path, req.file.mimetype);
+            ? await verifyHospitalDocument(fileBuffer, req.file.mimetype)
+            : await verifyPrescriptionDocument(fileBuffer, req.file.mimetype);
 
         // Persist uploaded file metadata into the user's verification.documents
         try {
             if (req.user && (req.user as any)._id) {
                 const fileDoc = {
-                    filename: req.file.originalname,
-                    path: req.file.path,
+                    filename: (req.file as any).originalname || (req.file as any).filename,
+                    path: req.file.path, // Cloudinary URL
                     mimeType: req.file.mimetype,
                     uploadedAt: new Date(),
                 };
@@ -140,16 +143,13 @@ export const verifyDocument = catchAsync(async (req: Request, res: Response) => 
             verification: result,
             documentType,
             file: {
-                fileName: req.file.originalname,
+                fileName: (req.file as any).originalname || (req.file as any).filename,
                 filePath: req.file.path,
                 mimeType: req.file.mimetype,
                 size: req.file.size,
             },
         });
     } catch (error) {
-        if (fs.existsSync(req.file.path)) {
-            fs.unlinkSync(req.file.path);
-        }
         throw error;
     }
 });

@@ -1,26 +1,10 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 import validate from '../../middlewares/validate';
 import { createRequestSchema } from './requests.validation';
 import * as requestController from './requests.controller';
 import { protect, restrictTo } from '../../middlewares/auth';
-
-// Ensure uploads directory exists
-const uploadsDir = path.join(process.cwd(), 'uploads', 'hospital-docs');
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, uploadsDir),
-    filename: (_req, file, cb) => {
-        const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-        const ext = path.extname(file.originalname);
-        cb(null, `hospital-${uniqueSuffix}${ext}`);
-    },
-});
+import { storage } from '../../utils/cloudinary';
 
 const upload = multer({
     storage,

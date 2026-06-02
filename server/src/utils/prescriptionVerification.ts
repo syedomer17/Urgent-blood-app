@@ -76,7 +76,7 @@ Verification Rules:
 Analyze the uploaded document and return the JSON response only.`;
 
 export const verifyPrescriptionDocument = async (
-    filePath: string,
+    fileBuffer: Buffer,
     mimeType: string
 ): Promise<PrescriptionVerificationResult> => {
     try {
@@ -88,7 +88,6 @@ export const verifyPrescriptionDocument = async (
             };
         }
 
-        const fileBuffer = fs.readFileSync(filePath);
         const base64Data = fileBuffer.toString('base64');
 
         const requestBody = {

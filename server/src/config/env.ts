@@ -19,6 +19,9 @@ const envSchema = Joi.object({
     SMTP_PASS: Joi.string().default('').description('SMTP password / app password'),
     SMTP_FROM: Joi.string().default('LifeLink <noreply@lifelink.app>').description('From address'),
     AI_AUTO_APPROVE_CONFIDENCE: Joi.number().min(0).max(1).default(0.8).description('Confidence threshold for auto-approving AI verifications'),
+    CLOUDINARY_CLOUD_NAME: Joi.string().required().description('Cloudinary Cloud Name'),
+    CLOUDINARY_API_KEY: Joi.string().required().description('Cloudinary API Key'),
+    CLOUDINARY_API_SECRET: Joi.string().required().description('Cloudinary API Secret'),
 }).unknown();
 
 const { value: envVars, error } = envSchema.prefs({ errors: { label: 'key' } }).validate(process.env);
@@ -56,5 +59,10 @@ export const config = {
     },
     gemini: {
         apiKey: envVars.GEMINI_API_KEY,
+    },
+    cloudinary: {
+        cloudName: envVars.CLOUDINARY_CLOUD_NAME,
+        apiKey: envVars.CLOUDINARY_API_KEY,
+        apiSecret: envVars.CLOUDINARY_API_SECRET,
     },
 };

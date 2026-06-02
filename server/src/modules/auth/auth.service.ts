@@ -190,13 +190,18 @@ export const registerHospital = async (userData: any, file?: { path: string; fil
             uploadedAt: new Date(),
         });
 
-        verificationResult = await verifyHospitalDocument(file.path, file.mimetype);
+        // Fetch buffer from Cloudinary for AI verification
+        const response = await fetch(file.path);
+        const fileBuffer = Buffer.from(await response.arrayBuffer());
+
+        verificationResult = await verifyHospitalDocument(fileBuffer, file.mimetype);
 
         userObj.verification.aiSuggestedVerified = verificationResult.verificationStatus === 'verified';
         userObj.verification.aiConfidence = verificationResult.confidenceScore;
         userObj.verification.aiDetails = JSON.stringify(verificationResult);
 
-        if (verificationResult.confidenceScore >= 80 && verificationResult.verificationStatus === 'verified') {
+        const threshold = Number(config.ai.autoApproveConfidence || 0.8);
+        if (verificationResult.confidenceScore >= (threshold * 100) && verificationResult.verificationStatus === 'verified') {
             userObj.verification.status = 'approved';
             userObj.isVerified = true;
         }

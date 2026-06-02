@@ -1,25 +1,10 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 import validate from '../../middlewares/validate';
 import { registerSchema, loginSchema, refreshTokenSchema, registerHospitalSchema } from './auth.validation';
 import * as authController from './auth.controller';
 import { protect } from '../../middlewares/auth';
-
-const hospitalUploadsDir = path.join(process.cwd(), 'uploads', 'hospital-docs');
-if (!fs.existsSync(hospitalUploadsDir)) {
-    fs.mkdirSync(hospitalUploadsDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, hospitalUploadsDir),
-    filename: (_req, file, cb) => {
-        const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-        const ext = path.extname(file.originalname);
-        cb(null, `hospital-reg-${uniqueSuffix}${ext}`);
-    },
-});
+import { storage } from '../../utils/cloudinary';
 
 const upload = multer({
     storage,
