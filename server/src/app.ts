@@ -107,7 +107,7 @@ const startServer = async () => {
     try {
         await connectDB();
         const server = http.createServer(app);
-        socketManager.init(server);
+            // sockets have been disabled; socketManager is a no-op stub
 
         // Background tasks
         setInterval(() => {

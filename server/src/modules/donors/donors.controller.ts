@@ -7,11 +7,10 @@ import * as donorsService from './donors.service';
 /** GET /api/v1/donors — all donors with location data */
 export const getAllDonors = catchAsync(async (_req: Request, res: Response) => {
     const donors = await donorsService.getDonorsWithLocation();
-    // Redact contactNumber for callers who are not admin or verified hospitals
+    // Redact contactNumber for callers who are not admin, requester, or hospital
     const callerRole = (_req.user && (_req.user as any).role) || 'anonymous';
-    const callerIsAdmin = callerRole === 'admin';
-    const callerIsRequesterVerified = (callerRole === 'requester' || callerRole === 'hospital') && Boolean((_req.user as any)?.isVerified);
-    if (!callerIsAdmin && !callerIsRequesterVerified) {
+    const callerIsAuthorized = ['admin', 'requester', 'hospital'].includes(callerRole);
+    if (!callerIsAuthorized) {
         donors.forEach((d: any) => { if (d && d.contactNumber) delete d.contactNumber; });
     }
     sendResponse(res, StatusCodes.OK, true, 'Donors retrieved successfully', donors);
@@ -24,11 +23,10 @@ export const getNearbyDonors = catchAsync(async (req: Request, res: Response) =>
     const radius = req.query.radius ? parseFloat(req.query.radius as string) : 10_000;
 
     const donors = await donorsService.getDonorsNear(lat, lng, radius);
-    // Redact contactNumber for callers who are not admin or verified hospitals
+    // Redact contactNumber for callers who are not admin, requester, or hospital
     const callerRole = (req.user && (req.user as any).role) || 'anonymous';
-    const callerIsAdmin2 = callerRole === 'admin';
-    const callerIsRequesterVerified2 = (callerRole === 'requester' || callerRole === 'hospital') && Boolean((req.user as any)?.isVerified);
-    if (!callerIsAdmin2 && !callerIsRequesterVerified2) {
+    const callerIsAuthorized2 = ['admin', 'requester', 'hospital'].includes(callerRole);
+    if (!callerIsAuthorized2) {
         donors.forEach((d: any) => { if (d && d.contactNumber) delete d.contactNumber; });
     }
     sendResponse(res, StatusCodes.OK, true, 'Nearby donors retrieved successfully', donors);
@@ -61,11 +59,10 @@ export const searchDonorsByCity = catchAsync(async (req: Request, res: Response)
     }
     const donors = await donorsService.getDonorsNear(lat!, lng!, radius);
 
-    // Redact contactNumber for callers who are not admin or verified hospitals
+    // Redact contactNumber for callers who are not admin, requester, or hospital
     const callerRole = (req.user && (req.user as any).role) || 'anonymous';
-    const callerIsAdmin3 = callerRole === 'admin';
-    const callerIsRequesterVerified3 = (callerRole === 'requester' || callerRole === 'hospital') && Boolean((req.user as any)?.isVerified);
-    if (!callerIsAdmin3 && !callerIsRequesterVerified3) {
+    const callerIsAuthorized3 = ['admin', 'requester', 'hospital'].includes(callerRole);
+    if (!callerIsAuthorized3) {
         donors.forEach((d: any) => { if (d && d.contactNumber) delete d.contactNumber; });
     }
 
