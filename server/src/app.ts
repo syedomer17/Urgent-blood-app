@@ -70,9 +70,9 @@ app.use('/api/v1/donors', donorRoutes);
 app.use('/api/v1/chat', chatRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 
-console.log("MONGO_URI:", !!process.env.MONGO_URI);
-console.log("JWT_SECRET:", !!process.env.JWT_SECRET);
-console.log("GEMINI_API_KEY:", !!process.env.GEMINI_API_KEY);
+// console.log("MONGO_URI:", !!process.env.MONGO_URI);
+// console.log("JWT_SECRET:", !!process.env.JWT_SECRET);
+// console.log("GEMINI_API_KEY:", !!process.env.GEMINI_API_KEY);
 
 app.get("/", (req: Request, res: Response) => {
     res.status(200).json({ message: 'Server is healthy', timestamp: new Date() });
