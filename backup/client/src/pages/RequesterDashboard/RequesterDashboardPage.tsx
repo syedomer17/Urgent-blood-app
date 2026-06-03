@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import type { User, BloodRequest } from "../../types";
+import { API_BASE_URL } from "../../utils/apiConfig";
 
 interface RequesterDashboardPageProps {
   user: User;
@@ -31,7 +32,7 @@ const RequesterDashboardPage = ({ user }: RequesterDashboardPageProps) => {
   useEffect(() => {
     const fetchMyRequests = async () => {
       try {
-        const res = await fetch("/api/v1/requests/my-requests", {
+        const res = await fetch(`${API_BASE_URL}/api/v1/requests/my-requests`, {
           credentials: "include",
         });
         if (res.ok) {

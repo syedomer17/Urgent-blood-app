@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
+import { API_BASE_URL } from '../../utils/apiConfig';
 import type { User } from '../../types';
 
 type RoleFilter = 'all' | 'hospital' | 'requester' | 'donor' | 'admin';
@@ -41,7 +42,7 @@ const VerificationsPage = () => {
 
   const fetchPending = async () => {
     try {
-      const res = await fetch('/api/v1/admin/verifications', { credentials: 'include' });
+      const res = await fetch(`${API_BASE_URL}/api/v1/admin/verifications`, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed');
       const data = await res.json();
       setUsers(data.data || []);
@@ -72,7 +73,7 @@ const VerificationsPage = () => {
   const handleAction = async (id: string, action: 'approve' | 'reject') => {
     try {
       const reason = action === 'reject' ? prompt('Rejection reason (optional)') : undefined;
-      const res = await fetch(`/api/v1/admin/verifications/${id}/${action}`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/admin/verifications/${id}/${action}`, {
         method: 'PATCH',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

@@ -33,8 +33,26 @@ const app = express();
 app.use(helmet());
 
 // Enable CORS
+const allowedOrigins = [
+    ...(config.cors.origin ? config.cors.origin.split(',').map(o => o.trim()) : []),
+    'https://urgentblood.syedomer.me',
+    'http://localhost:5173',
+    'capacitor://localhost',
+    'ionic://localhost',
+    'http://localhost'
+];
+
 app.use(cors({
-    origin: [config.cors.origin, 'http://localhost:5173', 'capacitor://localhost', 'ionic://localhost', "http://localhost"], // Allow localhost for mobile and web dev
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl)
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true
 }));
 

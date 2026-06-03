@@ -9,6 +9,7 @@ import type {
   User,
 } from "../../types";
 import { canDonateTo } from "../../utils/bloodCompatibility";
+import { API_BASE_URL } from "../../utils/apiConfig";
 import StatsGrid from "../../components/dashboard/StatsGrid";
 import QuickActions from "../../components/dashboard/QuickActions";
 import RequestCard from "../../components/dashboard/RequestCard";
@@ -71,7 +72,7 @@ const DashboardPage = ({ user, refetch }: DashboardPageProps) => {
 
   const fetchRequests = async () => {
     try {
-      const res = await fetch("/api/v1/requests", { credentials: "include" });
+      const res = await fetch(`${API_BASE_URL}/api/v1/requests`, { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
         setRequests(data.data?.requests ?? data.data ?? []);
@@ -85,9 +86,9 @@ const DashboardPage = ({ user, refetch }: DashboardPageProps) => {
     setLoading(true);
     try {
       const [historyRes, leaderboardRes, notificationsRes] = await Promise.all([
-        fetch("/api/v1/donations/history", { credentials: "include" }),
-        fetch("/api/v1/donations/leaderboard", { credentials: "include" }),
-        fetch("/api/v1/notifications", { credentials: "include" }),
+        fetch(`${API_BASE_URL}/api/v1/donations/history`, { credentials: "include" }),
+        fetch(`${API_BASE_URL}/api/v1/donations/leaderboard`, { credentials: "include" }),
+        fetch(`${API_BASE_URL}/api/v1/notifications`, { credentials: "include" }),
       ]);
 
       if (historyRes.ok) {
@@ -122,7 +123,7 @@ const DashboardPage = ({ user, refetch }: DashboardPageProps) => {
   }, [user.nextReminderAt, user.reminderEnabled]);
 
   const toggleAvailability = async () => {
-    await fetch("/api/v1/users/profile", {
+    await fetch(`${API_BASE_URL}/api/v1/users/profile`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -134,7 +135,7 @@ const DashboardPage = ({ user, refetch }: DashboardPageProps) => {
   const saveReminder = async () => {
     setSavingReminder(true);
     try {
-      const res = await fetch("/api/v1/users/profile", {
+      const res = await fetch(`${API_BASE_URL}/api/v1/users/profile`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -204,7 +205,7 @@ const DashboardPage = ({ user, refetch }: DashboardPageProps) => {
 
   const markNotificationRead = async (notificationId: string) => {
     try {
-      await fetch(`/api/v1/notifications/${notificationId}/read`, {
+      await fetch(`${API_BASE_URL}/api/v1/notifications/${notificationId}/read`, {
         method: "PATCH",
         credentials: "include",
       });

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
+import { API_BASE_URL } from "../../utils/apiConfig";
 import {
   HeroSection,
   FormInput,
@@ -101,7 +102,7 @@ const RegisterPage = () => {
         formData.append("hospitalPhone", hospitalPhone.trim());
         formData.append("document", documentFile);
 
-        const res = await fetch("/api/v1/auth/register-hospital", {
+        const res = await fetch(`${API_BASE_URL}/api/v1/auth/register-hospital`, {
           method: "POST",
           credentials: "include",
           body: formData,
@@ -174,7 +175,7 @@ const RegisterPage = () => {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/v1/auth/register", {
+      const res = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

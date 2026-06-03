@@ -1,6 +1,7 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import type { User } from "../../types";
+import { API_BASE_URL } from "../../utils/apiConfig";
 
 function toDateInputValue(value?: string) {
   return value ? value.slice(0, 10) : "";
@@ -49,7 +50,7 @@ const ProfilePage = ({ user, refetch, onLogout }: ProfilePageProps) => {
         return;
       }
 
-      const res = await fetch("/api/v1/users/profile", {
+      const res = await fetch(`${API_BASE_URL}/api/v1/users/profile`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

@@ -18,7 +18,7 @@ class ErrorBoundary extends React.Component<React.PropsWithChildren<{}>, State> 
   componentDidCatch(error: Error, info: any) {
     // Log to console — developer should check DevTools
     // Optionally wire to remote logging later
-    // eslint-disable-next-line no-console
+     
     console.error('ErrorBoundary caught:', error, info);
   }
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { API_BASE_URL } from "../../utils/apiConfig";
 import type { BloodRequest, User } from "../../types";
 
 interface HospitalDashboardProps {
@@ -36,8 +37,8 @@ const HospitalDashboardPage = ({ user }: HospitalDashboardProps) => {
     const fetchData = async () => {
       try {
         const [reqRes, donorRes] = await Promise.all([
-          fetch("/api/v1/requests/my-requests", { credentials: "include" }),
-          fetch("/api/v1/users/donors", { credentials: "include" }),
+          fetch(`${API_BASE_URL}/api/v1/requests/my-requests`, { credentials: "include" }),
+          fetch(`${API_BASE_URL}/api/v1/users/donors`, { credentials: "include" }),
         ]);
 
         if (reqRes.ok) {

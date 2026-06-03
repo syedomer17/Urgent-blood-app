@@ -3,7 +3,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import toast from "react-hot-toast";
 import { useSocket } from "../../hooks/useSocket";
-import ChatWindow, { type ChatMsg } from "../../components/chat/ChatWindow";
+import { API_BASE_URL } from "../../utils/apiConfig";
 
 // Fix Leaflet default icon paths broken by Vite
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
@@ -237,13 +237,9 @@ interface DonorCardProps {
   donor: DonorWithDistance;
   selected: boolean;
   onSelect: () => void;
-  onChat: () => void;
-  onPing: () => void;
-  pingLoading: boolean;
-  viewerRole: string;
 }
 
-function DonorCard({ donor, selected, onSelect, onChat, onPing, pingLoading, viewerRole }: DonorCardProps) {
+function DonorCard({ donor, selected, onSelect }: DonorCardProps) {
   const color = BLOOD_COLORS[donor.bloodGroup] ?? "#ef4444";
   const stars = Math.round(donor.trustRating ?? 0);
 
@@ -308,97 +304,37 @@ function DonorCard({ donor, selected, onSelect, onChat, onPing, pingLoading, vie
               </span>
             </div>
 
-            {/* Donations */}
-            <span className="text-xs text-secondary flex items-center gap-1">
-              <span className="material-symbols-outlined text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>
-                favorite
-              </span>
-              {donor.totalDonations} donated
-            </span>
-
-            {/* Distance */}
-            <span className="text-xs text-secondary flex items-center gap-1">
-              <span className="material-symbols-outlined text-xs">near_me</span>
-              {fmtDist(donor.distance)}
-            </span>
-
-            {/* City */}
-            {donor.location?.city && (
-              <span className="text-xs text-secondary flex items-center gap-1">
-                <span className="material-symbols-outlined text-xs">location_on</span>
-                {donor.location.city}
-              </span>
-            )}
+            {/* Distance / Donations */}
+            <div className="text-[11px] text-secondary">
+              📍 {fmtDist(donor.distance)} away · {donor.totalDonations} donation{donor.totalDonations !== 1 ? "s" : ""}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Action buttons */}
+      {/* Contact info (WhatsApp / Phone call) - REPLACED Ping button */}
       <div className="flex gap-2 mt-3">
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onChat(); }}
+        {/* WhatsApp Button */}
+        <a
+          href={`https://wa.me/${(donor.contactNumber || "").replace(/[^\d]/g, "")}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 font-bold text-xs hover:bg-emerald-500/20 active:scale-95 transition-all"
+        >
+          <span className="material-symbols-outlined text-base">chat</span>
+          WhatsApp
+        </a>
+        {/* Phone Call Button */}
+        <a
+          href={`tel:${donor.contactNumber || ""}`}
+          onClick={(e) => e.stopPropagation()}
           className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-primary/10 text-primary font-bold text-xs hover:bg-primary/20 active:scale-95 transition-all"
         >
-          <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>
-            chat_bubble
-          </span>
-          Chat
-        </button>
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onPing(); }}
-          disabled={pingLoading}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-error/10 text-error font-bold text-xs hover:bg-error/20 active:scale-95 transition-all disabled:opacity-50"
-        >
-          {pingLoading ? (
-            <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
-          ) : (
-            <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>
-              notifications_active
-            </span>
-          )}
-          Ping
-        </button>
+          <span className="material-symbols-outlined text-base">call</span>
+          Call
+        </a>
       </div>
-
-      {/* One-Tap Contact (only visible to hospitals/requesters and admins) */}
-      {['requester', 'admin', 'hospital'].includes((viewerRole || '').toString()) && donor.contactNumber && (
-        <div className="flex gap-2 mt-2">
-          <a
-            href={`tel:${donor.contactNumber}`}
-            onClick={(e) => e.stopPropagation()}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold active:scale-95 transition-all"
-            style={{ background: "#dcfce7", color: "#15803d", textDecoration: "none" }}
-          >
-            <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>call</span>
-            Call
-          </a>
-          <a
-            href={`https://wa.me/${donor.contactNumber.replace(/[^0-9]/g, "")}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold active:scale-95 transition-all"
-            style={{ background: "#d1fae5", color: "#047857", textDecoration: "none" }}
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="#047857"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.025.507 3.932 1.395 5.608L.05 23.708a.6.6 0 00.735.728l5.956-1.554A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.6c-1.876 0-3.654-.52-5.192-1.488l-.372-.228-3.857 1.007 1.027-3.752-.25-.395A9.552 9.552 0 012.4 12c0-5.302 4.298-9.6 9.6-9.6s9.6 4.298 9.6 9.6-4.298 9.6-9.6 9.6z"/></svg>
-            WhatsApp
-          </a>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              navigator.clipboard.writeText(donor.contactNumber!);
-              toast.success("Number copied!");
-            }}
-            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold active:scale-95 transition-all"
-            style={{ background: "#f0f0f0", color: "#666" }}
-          >
-            <span className="material-symbols-outlined text-sm">content_copy</span>
-          </button>
-        </div>
-      )}
     </div>
   );
 }
@@ -422,10 +358,6 @@ const DonorsNearMePage = ({ user }: Props) => {
   const [availableOnly, setAvailableOnly] = useState(false);
   const [donationFilter, setDonationFilter] = useState<(typeof DONATION_FILTERS)[number]>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [chatDonor, setChatDonor] = useState<Donor | null>(null);
-  const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
-  const [chatHistoryLoading, setChatHistoryLoading] = useState(false);
-  const [pingLoadingId, setPingLoadingId] = useState<string | null>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // ── Geolocation ──────────────────────────────────────────────────────────
@@ -465,7 +397,7 @@ const DonorsNearMePage = ({ user }: Props) => {
     try {
       const radiusMetres = radius * 1000;
       const res = await fetch(
-        `/api/v1/donors/near?lat=${userPos.lat}&lng=${userPos.lng}&radius=${radiusMetres}`,
+        `${API_BASE_URL}/api/v1/donors/near?lat=${userPos.lat}&lng=${userPos.lng}&radius=${radiusMetres}`,
         { credentials: "include" }
       );
       const data = await res.json();
@@ -496,7 +428,7 @@ const DonorsNearMePage = ({ user }: Props) => {
     if (userPos) fetchDonors();
   }, [userPos, radius, fetchDonors]);
 
-  // ── Socket: live availability updates ────────────────────────────────────
+  // ── Socket: live availability updates (socket is a stub when disabled)
 
   useEffect(() => {
     if (!socket) return;
@@ -507,83 +439,13 @@ const DonorsNearMePage = ({ user }: Props) => {
         )
       );
     };
-    const onPingSent = () => toast.success("Donor has been pinged!");
+
     socket.on("donor_availability_changed", onAvailChange);
-    socket.on("ping_sent", onPingSent);
+
     return () => {
       socket.off("donor_availability_changed", onAvailChange);
-      socket.off("ping_sent", onPingSent);
     };
   }, [socket]);
-
-  // ── Ping donor ───────────────────────────────────────────────────────────
-
-  const handlePing = (donor: DonorWithDistance) => {
-    if (!socket || !connected) {
-      toast.error("Real-time connection not available. Please refresh.");
-      return;
-    }
-    setPingLoadingId(donor._id);
-    socket.emit("ping_donor", {
-      donorId: donor._id,
-      bloodGroup: user.bloodGroup ?? "Unknown",
-      patientName: "Patient",
-      urgency: "high",
-      location: userPos
-        ? { latitude: userPos.lat, longitude: userPos.lng }
-        : null,
-    });
-    setTimeout(() => setPingLoadingId(null), 2000);
-  };
-
-  // ── Chat: load history when donor changes ────────────────────────────────
-
-  useEffect(() => {
-    if (!chatDonor) { setChatMessages([]); return; }
-    setChatHistoryLoading(true);
-    fetch(`/api/v1/chat/${chatDonor._id}`, { credentials: "include" })
-      .then((r) => r.json())
-      .then((data) => {
-        const msgs: ChatMsg[] = (data.data ?? []).map((m: { _id: string; from: string; text: string; createdAt: string }) => ({
-          id: m._id,
-          mine: m.from === user._id,
-          text: m.text,
-          timestamp: new Date(m.createdAt),
-        }));
-        setChatMessages(msgs);
-      })
-      .catch(() => {})
-      .finally(() => setChatHistoryLoading(false));
-  }, [chatDonor, user._id]);
-
-  // ── Chat: live incoming messages ─────────────────────────────────────────
-
-  useEffect(() => {
-    if (!socket || !chatDonor) return;
-    const onMsg = (data: { _id: string; from: string; message: string; timestamp: string }) => {
-      if (data.from !== chatDonor._id) return;
-      setChatMessages((prev): ChatMsg[] => {
-        if (prev.some((m) => m.id === data._id)) return prev;
-        return [...prev, { id: data._id, mine: false, text: data.message, timestamp: new Date(data.timestamp) }];
-      });
-    };
-    socket.on("receive_message", onMsg);
-    return () => { socket.off("receive_message", onMsg); };
-  }, [socket, chatDonor]);
-
-  // ── Chat: send message ───────────────────────────────────────────────────
-
-  const handleChatSend = useCallback((text: string) => {
-    if (!socket || !chatDonor) return;
-    const tempId = `tmp_${Date.now()}`;
-    setChatMessages((prev): ChatMsg[] => [...prev, { id: tempId, mine: true, text, timestamp: new Date() }]);
-    socket.emit("send_message", { recipientId: chatDonor._id, message: text });
-    socket.once("message_sent", (data: { _id: string; message: string; timestamp: string }) => {
-      setChatMessages((prev): ChatMsg[] =>
-        prev.map((m) => (m.id === tempId ? { ...m, id: data._id, timestamp: new Date(data.timestamp) } : m))
-      );
-    });
-  }, [socket, chatDonor]);
 
   // ── Card scroll into view when selected from map ─────────────────────────
 
@@ -845,10 +707,6 @@ const DonorsNearMePage = ({ user }: Props) => {
                         donor={donor}
                         selected={selectedId === donor._id}
                         onSelect={() => handleDonorSelect(donor._id)}
-                        onChat={() => setChatDonor(donor)}
-                        onPing={() => handlePing(donor)}
-                        pingLoading={pingLoadingId === donor._id}
-                        viewerRole={user.role}
                       />
                     </div>
                   ))}
@@ -859,21 +717,7 @@ const DonorsNearMePage = ({ user }: Props) => {
         )}
       </div>
 
-      {/* Chat window */}
-      {chatDonor && (
-        <ChatWindow
-          messages={chatMessages}
-          historyLoading={chatHistoryLoading}
-          peerName={chatDonor.name}
-          peerInitials={chatDonor.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)}
-          peerOnline={chatDonor.availability}
-          accentColor={BLOOD_COLORS[chatDonor.bloodGroup] ?? "#ef4444"}
-          socket={socket}
-          peerId={chatDonor._id}
-          onSend={handleChatSend}
-          onClose={() => setChatDonor(null)}
-        />
-      )}
+      {/* Chat removed */}
     </main>
   );
 };
