@@ -45,7 +45,7 @@ const allowedOrigins = [
 
 // Add origins from config if they exist and are not '*'
 if (config.cors.origin && config.cors.origin !== '*') {
-    config.cors.origin.split(',').forEach(origin => {
+    config.cors.origin.split(',').forEach((origin: string) => {
         const trimmed = origin.trim();
         if (trimmed && !allowedOrigins.includes(trimmed)) {
             allowedOrigins.push(trimmed);
