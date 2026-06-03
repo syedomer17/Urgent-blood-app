@@ -15,6 +15,7 @@ import DonorsPage from "./pages/Donors";
 import ErrorBoundary from "./components/ErrorBoundary";
 import ProfilePage from "./pages/Profile";
 import DashboardLayout from "./components/layout/DashboardLayout";
+import InstallPrompt from "./components/layout/InstallPrompt";
 
 function getHomePath(role: string) {
   switch (role) {
@@ -46,6 +47,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <InstallPrompt />
       <Toaster
         position="top-right"
         toastOptions={{
