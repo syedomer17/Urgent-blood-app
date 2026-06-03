@@ -30,11 +30,12 @@ import notificationRoutes from './modules/notifications/notification.routes';
 const app = express();
 
 // Security HTTP headers
-app.use(helmet());
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 
 // Enable CORS
 const allowedOrigins = [
-    ...(config.cors.origin ? config.cors.origin.split(',').map(o => o.trim()) : []),
     'https://urgentblood.syedomer.me',
     'http://localhost:5173',
     'capacitor://localhost',
@@ -42,15 +43,25 @@ const allowedOrigins = [
     'http://localhost'
 ];
 
+// Add origins from config if they exist and are not '*'
+if (config.cors.origin && config.cors.origin !== '*') {
+    config.cors.origin.split(',').forEach(origin => {
+        const trimmed = origin.trim();
+        if (trimmed && !allowedOrigins.includes(trimmed)) {
+            allowedOrigins.push(trimmed);
+        }
+    });
+}
+
 app.use(cors({
     origin: (origin, callback) => {
         // Allow requests with no origin (like mobile apps or curl)
         if (!origin) return callback(null, true);
         
-        if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+        if (config.cors.origin === '*' || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
-            callback(new Error('Not allowed by CORS'));
+            callback(null, false); // Just disallow, don't throw error
         }
     },
     credentials: true
