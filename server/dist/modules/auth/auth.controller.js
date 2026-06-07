@@ -56,8 +56,13 @@ exports.register = (0, catchAsync_1.catchAsync)(async (req, res) => {
     // Set cookies (tokens are ONLY sent via cookies, not in response body)
     res.cookie('accessToken', result.accessToken, accessTokenCookieOptions);
     res.cookie('refreshToken', result.refreshToken, cookieOptions);
-    // Send only user data in response (no tokens)
-    (0, responseHandler_1.sendResponse)(res, http_status_codes_1.StatusCodes.CREATED, true, 'User registered successfully', { user: result.user });
+    // Mobile clients cannot rely on browser-only httpOnly cookies, so expose tokens
+    // in the response body while still setting cookies for the web client.
+    (0, responseHandler_1.sendResponse)(res, http_status_codes_1.StatusCodes.CREATED, true, 'User registered successfully', {
+        user: result.user,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+    });
 });
 exports.registerHospital = (0, catchAsync_1.catchAsync)(async (req, res) => {
     const file = req.file ? { path: req.file.path, filename: req.file.filename, mimetype: req.file.mimetype } : undefined;
@@ -67,6 +72,8 @@ exports.registerHospital = (0, catchAsync_1.catchAsync)(async (req, res) => {
     res.cookie('refreshToken', result.refreshToken, cookieOptions);
     (0, responseHandler_1.sendResponse)(res, http_status_codes_1.StatusCodes.CREATED, true, 'Hospital registered successfully', {
         user: result.user,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
         verificationResult: result.verificationResult,
     });
 });
@@ -75,8 +82,13 @@ exports.login = (0, catchAsync_1.catchAsync)(async (req, res) => {
     // Set cookies (tokens are ONLY sent via cookies, not in response body)
     res.cookie('accessToken', result.accessToken, accessTokenCookieOptions);
     res.cookie('refreshToken', result.refreshToken, cookieOptions);
-    // Send only user data in response (no tokens)
-    (0, responseHandler_1.sendResponse)(res, http_status_codes_1.StatusCodes.OK, true, 'Login successful', { user: result.user });
+    // Mobile clients cannot rely on browser-only httpOnly cookies, so expose tokens
+    // in the response body while still setting cookies for the web client.
+    (0, responseHandler_1.sendResponse)(res, http_status_codes_1.StatusCodes.OK, true, 'Login successful', {
+        user: result.user,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+    });
 });
 exports.refreshToken = (0, catchAsync_1.catchAsync)(async (req, res) => {
     // Get refresh token from cookies (primary) or body (fallback)
@@ -91,7 +103,11 @@ exports.refreshToken = (0, catchAsync_1.catchAsync)(async (req, res) => {
     // Set new cookies (tokens are ONLY sent via cookies)
     res.cookie('accessToken', result.accessToken, accessTokenCookieOptions);
     res.cookie('refreshToken', result.refreshToken, cookieOptions);
-    (0, responseHandler_1.sendResponse)(res, http_status_codes_1.StatusCodes.OK, true, 'Token refreshed successfully', { tokenRefreshed: true });
+    (0, responseHandler_1.sendResponse)(res, http_status_codes_1.StatusCodes.OK, true, 'Token refreshed successfully', {
+        tokenRefreshed: true,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+    });
 });
 exports.logout = (0, catchAsync_1.catchAsync)(async (req, res) => {
     const refreshTokenValue = req.cookies.refreshToken || req.body.refreshToken;
