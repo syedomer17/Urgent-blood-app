@@ -5,6 +5,7 @@ import {
   Text,
   type PressableProps,
   type StyleProp,
+  type TextStyle,
   type ViewStyle,
 } from 'react-native';
 import { theme } from '../theme';
@@ -13,10 +14,11 @@ interface ButtonProps extends Omit<PressableProps, 'style'> {
   title: string;
   loading?: boolean;
   style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
   variant?: 'primary' | 'secondary' | 'ghost';
 }
 
-export function Button({ title, loading, variant = 'primary', disabled, style, ...props }: ButtonProps) {
+export function Button({ title, loading, variant = 'primary', disabled, style, textStyle, ...props }: ButtonProps) {
   return (
     <Pressable
       {...props}
@@ -32,7 +34,7 @@ export function Button({ title, loading, variant = 'primary', disabled, style, .
       {loading ? (
         <ActivityIndicator color={variant === 'primary' ? '#fff' : theme.colors.primary} />
       ) : (
-        <Text style={[styles.text, variant !== 'primary' && styles.textSecondary]}>{title}</Text>
+        <Text style={[styles.text, variant !== 'primary' && styles.textSecondary, textStyle]}>{title}</Text>
       )}
     </Pressable>
   );

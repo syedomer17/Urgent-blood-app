@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { fetchProfile, login as loginRequest, logout as logoutRequest, register as registerRequest } from '../api/lifelink';
+import { fetchProfile, login as loginRequest, logout as logoutRequest, register as registerRequest, registerHospital as registerHospitalRequest } from '../api/lifelink';
 import { clearTokens, getRefreshToken, saveTokens } from './tokenStorage';
 import type { AuthPayload, User } from '../types';
 
@@ -8,6 +8,7 @@ interface AuthContextValue {
   booting: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (payload: Parameters<typeof registerRequest>[0]) => Promise<void>;
+  registerHospital: (formData: FormData) => Promise<void>;
   logout: () => Promise<void>;
   reloadProfile: () => Promise<void>;
 }
@@ -69,6 +70,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       register: async (payload) => {
         const response = await registerRequest(payload);
+        await persistAuth(response);
+      },
+      registerHospital: async (formData) => {
+        const response = await registerHospitalRequest(formData);
         await persistAuth(response);
       },
       logout: async () => {

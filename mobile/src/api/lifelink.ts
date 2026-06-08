@@ -1,5 +1,5 @@
 import { apiRequest } from './client';
-import type { AuthPayload, BloodRequest, Donor, User } from '../types';
+import type { AuthPayload, BloodRequest, Donor, User, AdminStats, AdminReports, AdminAuditLog } from '../types';
 
 export interface LoginInput {
   email: string;
@@ -8,9 +8,18 @@ export interface LoginInput {
 
 export interface RegisterInput extends LoginInput {
   name: string;
-  role: 'donor' | 'requester';
+  role: 'donor' | 'requester' | 'hospital';
   bloodGroup?: string;
   contactNumber?: string;
+  location?: {
+    latitude?: number | null;
+    longitude?: number | null;
+    address?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    areaName?: string;
+  };
 }
 
 export function login(input: LoginInput) {
@@ -26,6 +35,14 @@ export function register(input: RegisterInput) {
     method: 'POST',
     skipAuth: true,
     body: JSON.stringify(input),
+  });
+}
+
+export function registerHospital(formData: FormData) {
+  return apiRequest<AuthPayload>('/api/v1/auth/register-hospital', {
+    method: 'POST',
+    skipAuth: true,
+    body: formData,
   });
 }
 
@@ -90,7 +107,49 @@ export function fetchNearbyDonors(lat: number, lng: number, radiusMetres: number
 }
 
 export function fetchAdminStats() {
-  return apiRequest<Record<string, unknown>>('/api/v1/admin/stats');
+  return apiRequest<AdminStats>('/api/v1/admin/stats');
+}
+
+export function fetchAdminUsers() {
+  return apiRequest<User[]>('/api/v1/admin/users');
+}
+
+export function fetchAdminRequests() {
+  return apiRequest<BloodRequest[]>('/api/v1/admin/requests');
+}
+
+export function fetchAdminReports() {
+  return apiRequest<AdminReports>('/api/v1/admin/reports');
+}
+
+export function fetchAdminAuditLogs() {
+  return apiRequest<AdminAuditLog[]>('/api/v1/admin/audit-logs');
+}
+
+export function fetchVerifications() {
+  return apiRequest<User[]>('/api/v1/admin/verifications');
+}
+
+export function handleVerification(id: string, action: 'approve' | 'reject', reason?: string) {
+  return apiRequest<unknown>(`/api/v1/admin/verifications/${id}/${action}`, {
+    method: 'PATCH',
+    body: action === 'reject' ? JSON.stringify({ reason }) : undefined,
+  });
+}
+
+export function updateUserStatus(id: string, status: 'active' | 'suspended' | 'blocked') {
+  return apiRequest<unknown>(`/api/v1/admin/users/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
+
+export function fetchDonationHistory() {
+  return apiRequest<any[]>('/api/v1/donations/history');
+}
+
+export function fetchLeaderboard() {
+  return apiRequest<any[]>('/api/v1/donations/leaderboard');
 }
 
 export function updateProfile(input: Partial<User>) {

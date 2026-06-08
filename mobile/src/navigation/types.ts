@@ -10,4 +10,8 @@ export type AppTabParamList = {
   Donors: undefined;
   Nearby: undefined;
   Profile: undefined;
+  Admin: undefined;
+  Verifications: undefined;
+  Hospital: undefined;
+  Requester: undefined;
 };

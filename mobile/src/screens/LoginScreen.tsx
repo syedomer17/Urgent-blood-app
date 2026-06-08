@@ -1,92 +1,58 @@
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View, StatusBar } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button } from '../components/Button';
-import { Header } from '../components/Header';
-import { Screen } from '../components/Screen';
-import { TextField } from '../components/TextField';
-import { useAuth } from '../auth/AuthProvider';
+import { SplashView } from '../components/login/SplashView';
+import { LoginForm } from '../components/login/LoginForm';
 import { theme } from '../theme';
 import type { AuthStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export function LoginScreen({ navigation }: Props) {
-  const { login } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  async function submit() {
-    if (!email.trim() || !password) {
-      Alert.alert('Missing details', 'Enter your email and password.');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await login(email.trim(), password);
-    } catch (error) {
-      Alert.alert('Login failed', error instanceof Error ? error.message : 'Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  }
+  const [showForm, setShowForm] = useState(false);
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Screen>
-        <View style={styles.hero}>
-          <Text style={styles.brand}>LifeLink</Text>
-          <Text style={styles.tagline}>Urgent blood support, now native on Android.</Text>
-        </View>
-        <View style={styles.card}>
-          <Header title="Welcome back" subtitle="Sign in to manage requests, donors, and live alerts." />
-          <TextField
-            label="Email"
-            autoCapitalize="none"
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-            placeholder="you@example.com"
-          />
-          <TextField
-            label="Password"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Enter password"
-          />
-          <Button title="Login" loading={loading} onPress={submit} />
-          <Button title="Create account" variant="ghost" onPress={() => navigation.navigate('Register')} />
-        </View>
-      </Screen>
-    </KeyboardAvoidingView>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      {/* Background decoration (simulating the web's blur circles) */}
+      <View style={[styles.circle, styles.circle1]} />
+      <View style={[styles.circle, styles.circle2]} />
+
+      {showForm ? (
+        <LoginForm 
+          onBack={() => setShowForm(false)} 
+          onRegisterClick={() => navigation.navigate('Register')}
+        />
+      ) : (
+        <SplashView 
+          onLoginClick={() => setShowForm(true)} 
+          onRegisterClick={() => navigation.navigate('Register')}
+        />
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  hero: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: 28,
-    gap: 8,
-    padding: 28,
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.primary, // Using primary as base
   },
-  brand: {
-    color: '#fff',
-    fontSize: 38,
-    fontWeight: '900',
+  circle: {
+    position: 'absolute',
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
-  tagline: {
-    color: '#fee2e2',
-    fontSize: 16,
-    lineHeight: 23,
+  circle1: {
+    width: 300,
+    height: 300,
+    top: -50,
+    left: -100,
   },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 24,
-    gap: 16,
-    padding: 18,
+  circle2: {
+    width: 400,
+    height: 400,
+    bottom: -150,
+    right: -150,
   },
 });
