@@ -28,8 +28,13 @@ export const register = catchAsync(async (req: Request, res: Response) => {
     res.cookie('accessToken', result.accessToken, accessTokenCookieOptions);
     res.cookie('refreshToken', result.refreshToken, cookieOptions);
 
-    // Send only user data in response (no tokens)
-    sendResponse(res, StatusCodes.CREATED, true, 'User registered successfully', { user: result.user });
+    // Mobile clients cannot rely on browser-only httpOnly cookies, so expose tokens
+    // in the response body while still setting cookies for the web client.
+    sendResponse(res, StatusCodes.CREATED, true, 'User registered successfully', {
+        user: result.user,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+    });
 });
 
 export const registerHospital = catchAsync(async (req: Request, res: Response) => {
@@ -42,6 +47,8 @@ export const registerHospital = catchAsync(async (req: Request, res: Response) =
 
     sendResponse(res, StatusCodes.CREATED, true, 'Hospital registered successfully', {
         user: result.user,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
         verificationResult: result.verificationResult,
     });
 });
@@ -53,8 +60,13 @@ export const login = catchAsync(async (req: Request, res: Response) => {
     res.cookie('accessToken', result.accessToken, accessTokenCookieOptions);
     res.cookie('refreshToken', result.refreshToken, cookieOptions);
 
-    // Send only user data in response (no tokens)
-    sendResponse(res, StatusCodes.OK, true, 'Login successful', { user: result.user });
+    // Mobile clients cannot rely on browser-only httpOnly cookies, so expose tokens
+    // in the response body while still setting cookies for the web client.
+    sendResponse(res, StatusCodes.OK, true, 'Login successful', {
+        user: result.user,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+    });
 });
 
 export const refreshToken = catchAsync(async (req: Request, res: Response) => {
@@ -74,7 +86,11 @@ export const refreshToken = catchAsync(async (req: Request, res: Response) => {
     res.cookie('accessToken', result.accessToken, accessTokenCookieOptions);
     res.cookie('refreshToken', result.refreshToken, cookieOptions);
 
-    sendResponse(res, StatusCodes.OK, true, 'Token refreshed successfully', { tokenRefreshed: true });
+    sendResponse(res, StatusCodes.OK, true, 'Token refreshed successfully', {
+        tokenRefreshed: true,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+    });
 });
 
 export const logout = catchAsync(async (req: Request, res: Response) => {
