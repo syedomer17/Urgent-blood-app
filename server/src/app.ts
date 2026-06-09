@@ -40,7 +40,8 @@ const allowedOrigins = [
     'http://localhost:5173',
     'capacitor://localhost',
     'ionic://localhost',
-    'http://localhost'
+    'http://localhost',
+    'exp://192.168.1.11:8081'
 ];
 
 // Add origins from config if they exist and are not '*'
