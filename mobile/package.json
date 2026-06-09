@@ -6,6 +6,7 @@
     "@react-navigation/bottom-tabs": "^7.16.2",
     "@react-navigation/native": "^7.2.5",
     "@react-navigation/native-stack": "^7.16.0",
+<<<<<<< Updated upstream
     "expo": "~56.0.9",
     "expo-location": "^56.0.16",
     "expo-secure-store": "^56.0.4",
@@ -19,16 +20,27 @@
     "react-native-safe-area-context": "^5.8.0",
     "react-native-screens": "^4.25.2",
     "react-native-toast-message": "^2.3.3",
+=======
+    "expo": "~54.0.0",
+    "expo-location": "~19.0.8",
+    "expo-secure-store": "~15.0.8",
+    "expo-status-bar": "~3.0.9",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-maps": "1.20.1",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.16.0",
+>>>>>>> Stashed changes
     "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
-    "@types/react": "~19.2.2",
-    "typescript": "~6.0.3"
+    "@types/react": "~19.1.10",
+    "typescript": "~5.9.2"
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web"
   },
   "private": true
