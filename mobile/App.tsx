@@ -1,5 +1,6 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
+import Toast from 'react-native-toast-message';
 import { AuthProvider, useAuth } from './src/auth/AuthProvider';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { AuthNavigator } from './src/navigation/AuthNavigator';
@@ -17,6 +18,7 @@ function Root() {
     <NavigationContainer>
       <StatusBar style="light" />
       {user ? <AppNavigator /> : <AuthNavigator />}
+      <Toast />
     </NavigationContainer>
   );
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Alert, StyleSheet, View, KeyboardAvoidingView, Platform } from 'react-native';
+import { StyleSheet, View, KeyboardAvoidingView, Platform } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import Toast from 'react-native-toast-message';
 import { useAuth } from '../auth/AuthProvider';
 import { Button } from '../components/Button';
 import { Header } from '../components/Header';
@@ -51,43 +52,49 @@ export function RegisterScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
 
   function handleNextStep() {
-    if (!name.trim()) { Alert.alert('Error', 'Full name is required.'); return; }
-    if (!email.trim()) { Alert.alert('Error', 'Email address is required.'); return; }
-    if (!password) { Alert.alert('Error', 'Password is required.'); return; }
-    if (password.length < 6) { Alert.alert('Error', 'Password must be at least 6 characters.'); return; }
+    if (!name.trim()) { 
+      Toast.show({ type: 'error', text1: 'Missing Info', text2: 'Full name is required.' }); 
+      return; 
+    }
+    if (!email.trim()) { 
+      Toast.show({ type: 'error', text1: 'Missing Info', text2: 'Email address is required.' }); 
+      return; 
+    }
+    if (!password) { 
+      Toast.show({ type: 'error', text1: 'Missing Info', text2: 'Password is required.' }); 
+      return; 
+    }
+    if (password.length < 6) { 
+      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Password must be at least 6 characters.' }); 
+      return; 
+    }
 
     setStep(2);
   }
 
   async function handlePickDocument() {
-    // Note: Document picker requires expo-document-picker to be installed.
-    // For now, we provide an informative alert.
-    Alert.alert(
-      'Document Selection',
-      'Please select a verification document. (Note: Integration with expo-document-picker is recommended for production).',
-      [
-        {
-          text: 'Mock Selection',
-          onPress: () => setDocument({
-            uri: 'file://mock/hospital-doc.pdf',
-            name: 'hospital-doc.pdf',
-            type: 'application/pdf',
-          })
-        },
-        { text: 'Cancel', style: 'cancel' }
-      ]
-    );
+    // Note: In a real app, use expo-document-picker
+    Toast.show({
+      type: 'info',
+      text1: 'Doc Selector',
+      text2: 'Mock document selected for demo purposes.',
+    });
+    setDocument({
+      uri: 'file://mock/hospital-doc.pdf',
+      name: 'hospital-doc.pdf',
+      type: 'application/pdf',
+    });
   }
 
   async function handleSubmit() {
     if (role === 'hospital') {
-      if (!hospitalName.trim()) { Alert.alert('Error', 'Hospital name is required.'); return; }
-      if (!registrationNumber.trim()) { Alert.alert('Error', 'Registration number is required.'); return; }
-      if (!licenseNumber.trim()) { Alert.alert('Error', 'License number is required.'); return; }
-      if (!hospitalAddress.trim()) { Alert.alert('Error', 'Hospital address is required.'); return; }
-      if (!hospitalEmail.trim()) { Alert.alert('Error', 'Hospital email is required.'); return; }
-      if (!hospitalPhone.trim()) { Alert.alert('Error', 'Hospital phone is required.'); return; }
-      if (!document) { Alert.alert('Error', 'Please upload a hospital document.'); return; }
+      if (!hospitalName.trim()) { Toast.show({ type: 'error', text1: 'Field Required', text2: 'Hospital name is required.' }); return; }
+      if (!registrationNumber.trim()) { Toast.show({ type: 'error', text1: 'Field Required', text2: 'Registration number is required.' }); return; }
+      if (!licenseNumber.trim()) { Toast.show({ type: 'error', text1: 'Field Required', text2: 'License number is required.' }); return; }
+      if (!hospitalAddress.trim()) { Toast.show({ type: 'error', text1: 'Field Required', text2: 'Hospital address is required.' }); return; }
+      if (!hospitalEmail.trim()) { Toast.show({ type: 'error', text1: 'Field Required', text2: 'Hospital email is required.' }); return; }
+      if (!hospitalPhone.trim()) { Toast.show({ type: 'error', text1: 'Field Required', text2: 'Hospital phone is required.' }); return; }
+      if (!document) { Toast.show({ type: 'error', text1: 'Missing Document', text2: 'Please upload a hospital document.' }); return; }
 
       setLoading(true);
       try {
@@ -112,9 +119,17 @@ export function RegisterScreen({ navigation }: Props) {
         } as any);
 
         await registerHospital(formData);
-        Alert.alert('Success', 'Hospital registered! Pending verification.');
+        Toast.show({
+          type: 'success',
+          text1: 'Hospital Registered',
+          text2: 'Account pending manual verification.',
+        });
       } catch (error: any) {
-        Alert.alert('Registration failed', error?.message || 'Please try again.');
+        Toast.show({
+          type: 'error',
+          text1: 'Registration Failed',
+          text2: error?.message || 'Please try again.',
+        });
       } finally {
         setLoading(false);
       }
@@ -122,7 +137,7 @@ export function RegisterScreen({ navigation }: Props) {
     }
 
     if (role === 'donor' && !bloodGroup) {
-      Alert.alert('Error', 'Blood group is required for donors.');
+      Toast.show({ type: 'error', text1: 'Field Required', text2: 'Blood group is required for donors.' });
       return;
     }
 
@@ -151,9 +166,17 @@ export function RegisterScreen({ navigation }: Props) {
     setLoading(true);
     try {
       await register(payload);
-      Alert.alert('Success', 'Account created successfully!');
+      Toast.show({
+        type: 'success',
+        text1: 'Account Created',
+        text2: 'Welcome to the LifeLink community!',
+      });
     } catch (error: any) {
-      Alert.alert('Registration failed', error?.message || 'Please try again.');
+      Toast.show({
+        type: 'error',
+        text1: 'Registration Failed',
+        text2: error?.message || 'Please try again.',
+      });
     } finally {
       setLoading(false);
     }

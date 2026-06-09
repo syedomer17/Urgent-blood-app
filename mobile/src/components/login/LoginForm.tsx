@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { ArrowLeft, LogIn, Mail, Lock } from 'lucide-react-native';
+import Toast from 'react-native-toast-message';
 import { TextField } from '../TextField';
 import { Button } from '../Button';
 import { useAuth } from '../../auth/AuthProvider';
@@ -17,15 +19,28 @@ export function LoginForm({ onBack, onRegisterClick }: LoginFormProps) {
 
   async function handleSubmit() {
     if (!email.trim() || !password) {
-      Alert.alert('Error', 'Please enter both email and password.');
+      Toast.show({
+        type: 'error',
+        text1: 'Validation Error',
+        text2: 'Please enter both email and password.',
+      });
       return;
     }
 
     setLoading(true);
     try {
       await login(email.trim(), password);
+      Toast.show({
+        type: 'success',
+        text1: 'Welcome back!',
+        text2: 'Successfully logged in.',
+      });
     } catch (error: any) {
-      Alert.alert('Login Failed', error?.message || 'Something went wrong');
+      Toast.show({
+        type: 'error',
+        text1: 'Login Failed',
+        text2: error?.message || 'Invalid credentials. Please try again.',
+      });
     } finally {
       setLoading(false);
     }
@@ -37,17 +52,17 @@ export function LoginForm({ onBack, onRegisterClick }: LoginFormProps) {
       style={styles.container}
     >
       <TouchableOpacity onPress={onBack} style={styles.backButton}>
-        <Text style={styles.backText}>← Back</Text>
+        <ArrowLeft size={24} color="#fff" />
       </TouchableOpacity>
 
       <View style={styles.header}>
         <Text style={styles.logoText}>LifeLink</Text>
+        <Text style={styles.headerSub}>Empowering Donors, Saving Lives</Text>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Welcome back</Text>
-        <Text style={styles.cardSub}>Log in to continue saving lives</Text>
-
+        <Text style={styles.cardTitle}>Login</Text>
+        
         <View style={styles.form}>
           <TextField
             label="Email Address"
@@ -70,7 +85,7 @@ export function LoginForm({ onBack, onRegisterClick }: LoginFormProps) {
           />
 
           <Button 
-            title="Log In" 
+            title="Access Account" 
             onPress={handleSubmit} 
             loading={loading}
             style={styles.loginButton}
@@ -78,9 +93,9 @@ export function LoginForm({ onBack, onRegisterClick }: LoginFormProps) {
           />
         </View>
 
-        <TouchableOpacity onPress={onRegisterClick}>
+        <TouchableOpacity onPress={onRegisterClick} style={styles.footer}>
           <Text style={styles.footerText}>
-            Don't have an account? <Text style={styles.signUp}>Sign Up</Text>
+            New to LifeLink? <Text style={styles.signUp}>Create Account</Text>
           </Text>
         </TouchableOpacity>
       </View>
@@ -96,74 +111,93 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    top: 40,
+    top: 50,
     left: 20,
     zIndex: 10,
-  },
-  backText: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 16,
-    fontWeight: 'bold',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     alignItems: 'center',
     marginBottom: 40,
   },
   logoText: {
-    fontSize: 28,
+    fontSize: 42,
     fontWeight: '900',
     color: '#fff',
+    letterSpacing: -1,
+  },
+  headerSub: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '600',
+    marginTop: 4,
   },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 30,
-    padding: 30,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 32,
+    padding: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.15)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 5,
   },
   cardTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '800',
     color: '#fff',
-    textAlign: 'center',
-  },
-  cardSub: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
-    textAlign: 'center',
-    marginTop: 4,
-    marginBottom: 30,
+    marginBottom: 24,
   },
   form: {
-    gap: 20,
+    gap: 16,
   },
   label: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 8,
   },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.15)',
+    height: 56,
+    borderRadius: 16,
     color: '#fff',
+    paddingHorizontal: 16,
   },
   loginButton: {
     backgroundColor: '#fff',
-    height: 60,
+    height: 56,
     borderRadius: 16,
-    marginTop: 10,
+    marginTop: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
   },
   loginButtonText: {
-    color: '#b71c1c',
-    fontSize: 18,
+    color: '#dc2626',
+    fontSize: 16,
     fontWeight: '800',
+  },
+  footer: {
+    marginTop: 24,
+    alignItems: 'center',
   },
   footerText: {
     color: 'rgba(255,255,255,0.7)',
-    textAlign: 'center',
-    marginTop: 24,
     fontSize: 14,
   },
   signUp: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '800',
   },
 });

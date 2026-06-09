@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Pressable,
   ScrollView,
@@ -9,7 +8,10 @@ import {
   Text,
   View,
   RefreshControl,
+  TouchableOpacity,
 } from 'react-native';
+import { LayoutDashboard, ClipboardList, Users, ArrowUpRight, CheckCircle2, AlertCircle, Droplets, MapPin, Star, History } from 'lucide-react-native';
+import Toast from 'react-native-toast-message';
 import { fetchMyRequests, fetchUserDonors } from '../api/lifelink';
 import { Header } from '../components/Header';
 import { Screen } from '../components/Screen';
@@ -37,7 +39,11 @@ export function HospitalDashboardScreen() {
       setRequests(requestsList);
       setDonors(donorData || []);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load hospital dashboard');
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to load hospital dashboard',
+      });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -90,66 +96,61 @@ export function HospitalDashboardScreen() {
 
   return (
     <Screen scroll={false}>
-      <Header title="Hospital Panel" subtitle="Manage requests and track donors." />
+      <Header title="Hospital Hub" subtitle="Operations management" />
 
-      <View style={styles.tabBar}>
-        {(['overview', 'requests', 'donors'] as Tab[]).map((t) => (
-          <Pressable
-            key={t}
-            onPress={() => setActiveTab(t)}
-            style={[styles.tab, activeTab === t && styles.tabActive]}
-          >
-            <Text style={[styles.tabText, activeTab === t && styles.tabTextActive]}>
-              {t.charAt(0).toUpperCase() + t.slice(1)}
-            </Text>
-          </Pressable>
-        ))}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity 
+          onPress={() => setActiveTab('overview')} 
+          style={[styles.tabItem, activeTab === 'overview' && styles.tabItemActive]}
+        >
+          <LayoutDashboard size={18} color={activeTab === 'overview' ? theme.colors.primary : theme.colors.muted} />
+          <Text style={[styles.tabLabel, activeTab === 'overview' && styles.tabLabelActive]}>Summary</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          onPress={() => setActiveTab('requests')} 
+          style={[styles.tabItem, activeTab === 'requests' && styles.tabItemActive]}
+        >
+          <ClipboardList size={18} color={activeTab === 'requests' ? theme.colors.primary : theme.colors.muted} />
+          <Text style={[styles.tabLabel, activeTab === 'requests' && styles.tabLabelActive]}>Requests</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          onPress={() => setActiveTab('donors')} 
+          style={[styles.tabItem, activeTab === 'donors' && styles.tabItemActive]}
+        >
+          <Users size={18} color={activeTab === 'donors' ? theme.colors.primary : theme.colors.muted} />
+          <Text style={[styles.tabLabel, activeTab === 'donors' && styles.tabLabelActive]}>Donors</Text>
+        </TouchableOpacity>
       </View>
 
       {activeTab === 'overview' && (
         <ScrollView 
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
           contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
           <View style={styles.statsGrid}>
-            <View style={[styles.statBox, { borderLeftColor: theme.colors.warning }]}>
-              <Text style={styles.statVal}>{stats.pending}</Text>
-              <Text style={styles.statLab}>Pending</Text>
-            </View>
-            <View style={[styles.statBox, { borderLeftColor: theme.colors.info }]}>
-              <Text style={styles.statVal}>{stats.accepted}</Text>
-              <Text style={styles.statLab}>Accepted</Text>
-            </View>
-            <View style={[styles.statBox, { borderLeftColor: theme.colors.success }]}>
-              <Text style={styles.statVal}>{stats.fulfilled}</Text>
-              <Text style={styles.statLab}>Fulfilled</Text>
-            </View>
-            <View style={[styles.statBox, { borderLeftColor: theme.colors.primary }]}>
-              <Text style={styles.statVal}>{stats.total}</Text>
-              <Text style={styles.statLab}>Total</Text>
-            </View>
-            <View style={[styles.statBox, { borderLeftColor: theme.colors.success }]}>
-              <Text style={styles.statVal}>{stats.successRate}%</Text>
-              <Text style={styles.statLab}>Success Rate</Text>
-            </View>
-            <View style={[styles.statBox, { borderLeftColor: theme.colors.info }]}>
-              <Text style={styles.statVal}>{stats.totalDonations}</Text>
-              <Text style={styles.statLab}>Donation Recs</Text>
-            </View>
+            <StatBox label="Pending" value={stats.pending} color={theme.colors.warning} />
+            <StatBox label="Accepted" value={stats.accepted} color={theme.colors.info} />
+            <StatBox label="Fulfilled" value={stats.fulfilled} color={theme.colors.success} />
+            <StatBox label="Efficiency" value={`${stats.successRate}%`} color={theme.colors.primary} />
           </View>
 
-          <Text style={styles.sectionTitle}>Donor Availability by Group</Text>
+          <View style={styles.sectionHeader}>
+            <Droplets size={20} color={theme.colors.text} />
+            <Text style={styles.sectionTitle}>Blood Inventory</Text>
+          </View>
           <View style={styles.inventoryGrid}>
             {inventory.map((item) => (
               <View key={item.group} style={styles.inventoryCard}>
                 <Text style={styles.invGroup}>{item.group}</Text>
-                <Text style={[styles.invVal, item.available < 3 && styles.invLow]}>
-                  {item.available} <Text style={styles.invSub}>Donors</Text>
-                </Text>
-                {item.available < 3 && <Text style={styles.lowTag}>LOW</Text>}
+                <Text style={[styles.invVal, item.available < 3 && styles.invLow]}>{item.available}</Text>
+                <Text style={styles.invSub}>Ready</Text>
+                {item.available < 3 && <View style={styles.lowBadge}><Text style={styles.lowBadgeText}>LOW</Text></View>}
               </View>
             ))}
           </View>
+
+          <View style={{ height: 20 }} />
         </ScrollView>
       )}
 
@@ -161,7 +162,10 @@ export function HospitalDashboardScreen() {
           renderItem={({ item }) => (
             <View style={styles.requestCard}>
               <View style={styles.reqHeader}>
-                <Text style={styles.reqPatient}>{item.patientName}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.reqPatient}>{item.patientName}</Text>
+                  <Text style={styles.reqMeta}>{item.bloodGroup} • {item.unitsRequired} Units</Text>
+                </View>
                 <View style={[styles.statusBadge, 
                   item.status === 'pending' ? styles.statusPending : 
                   item.status === 'accepted' ? styles.statusAccepted : 
@@ -171,34 +175,44 @@ export function HospitalDashboardScreen() {
                   <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
                 </View>
               </View>
-              <Text style={styles.reqMeta}>{item.bloodGroup} • {item.unitsRequired} Units</Text>
-              <Text style={styles.reqDate}>Required: {item.requiredDate ? new Date(item.requiredDate).toLocaleDateString() : 'N/A'}</Text>
+              <View style={styles.reqFooter}>
+                <History size={14} color={theme.colors.muted} />
+                <Text style={styles.reqDate}>Requested: {item.requiredDate ? new Date(item.requiredDate).toLocaleDateString() : 'N/A'}</Text>
+              </View>
             </View>
           )}
-          ListEmptyComponent={<Text style={styles.emptyText}>No requests created yet.</Text>}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <ClipboardList size={48} color={theme.colors.border} />
+              <Text style={styles.emptyText}>No requests created yet.</Text>
+            </View>
+          }
           contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
         />
       )}
 
       {activeTab === 'donors' && (
         <View style={{ flex: 1 }}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterBar} contentContainerStyle={{ paddingRight: 20 }}>
-            <Pressable 
-              onPress={() => setBloodFilter('all')} 
-              style={[styles.bloodChip, bloodFilter === 'all' && styles.bloodChipActive]}
-            >
-              <Text style={[styles.bloodChipText, bloodFilter === 'all' && styles.bloodChipTextActive]}>ALL</Text>
-            </Pressable>
-            {bloodGroups.map((bg) => (
-              <Pressable 
-                key={bg} 
-                onPress={() => setBloodFilter(bg)} 
-                style={[styles.bloodChip, bloodFilter === bg && styles.bloodChipActive]}
+          <View style={styles.filterSection}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+              <TouchableOpacity 
+                onPress={() => setBloodFilter('all')} 
+                style={[styles.bloodChip, bloodFilter === 'all' && styles.bloodChipActive]}
               >
-                <Text style={[styles.bloodChipText, bloodFilter === bg && styles.bloodChipTextActive]}>{bg}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+                <Text style={[styles.bloodChipText, bloodFilter === 'all' && styles.bloodChipTextActive]}>ALL</Text>
+              </TouchableOpacity>
+              {bloodGroups.map((bg) => (
+                <TouchableOpacity 
+                  key={bg} 
+                  onPress={() => setBloodFilter(bg)} 
+                  style={[styles.bloodChip, bloodFilter === bg && styles.bloodChipActive]}
+                >
+                  <Text style={[styles.bloodChipText, bloodFilter === bg && styles.bloodChipTextActive]}>{bg}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
 
           <FlatList
             data={filteredDonors}
@@ -211,22 +225,35 @@ export function HospitalDashboardScreen() {
                 </View>
                 <View style={styles.donorInfo}>
                   <Text style={styles.donorName}>{item.name}</Text>
-                  <Text style={styles.donorMeta}>{item.location?.city || item.location?.address || 'No location'}</Text>
+                  <View style={styles.donorLocation}>
+                    <MapPin size={12} color={theme.colors.muted} />
+                    <Text style={styles.donorMeta}>{item.location?.city || item.location?.address || 'No location'}</Text>
+                  </View>
                   <View style={styles.donorTags}>
                     <View style={[styles.tag, item.availability ? styles.tagSuccess : styles.tagMuted]}>
-                      <Text style={styles.tagText}>{item.availability ? 'Available' : 'Unavailable'}</Text>
+                      <Text style={[styles.tagText, { color: item.availability ? '#166534' : '#64748b' }]}>
+                        {item.availability ? 'Available' : 'Busy'}
+                      </Text>
                     </View>
                     {item.trustRating && (
                       <View style={[styles.tag, styles.tagInfo]}>
-                        <Text style={styles.tagText}>⭐ {item.trustRating}</Text>
+                        <Star size={10} color="#1e40af" />
+                        <Text style={[styles.tagText, { color: '#1e40af' }]}>{item.trustRating}</Text>
                       </View>
                     )}
                   </View>
                 </View>
+                <ArrowUpRight size={20} color={theme.colors.border} />
               </View>
             )}
-            ListEmptyComponent={<Text style={styles.emptyText}>No donors found matching criteria.</Text>}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Users size={48} color={theme.colors.border} />
+                <Text style={styles.emptyText}>No donors found matching criteria.</Text>
+              </View>
+            }
             contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
           />
         </View>
       )}
@@ -234,90 +261,113 @@ export function HospitalDashboardScreen() {
   );
 }
 
+function StatBox({ label, value, color }: { label: string; value: string | number; color: string }) {
+  return (
+    <View style={[styles.statBox, { borderLeftColor: color }]}>
+      <Text style={styles.statVal}>{value}</Text>
+      <Text style={styles.statLab}>{label}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  tabBar: {
+  tabContainer: {
     flexDirection: 'row',
-    backgroundColor: theme.colors.surfaceMuted,
-    borderRadius: 12,
-    padding: 4,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 20,
+    padding: 6,
+    marginHorizontal: 20,
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
-  tab: {
+  tabItem: {
     flex: 1,
-    paddingVertical: 10,
+    flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 10,
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 14,
+    gap: 8,
   },
-  tabActive: {
-    backgroundColor: '#fff',
+  tabItemActive: {
+    backgroundColor: theme.colors.background,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 1,
   },
-  tabText: {
+  tabLabel: {
     fontSize: 13,
     fontWeight: '700',
     color: theme.colors.muted,
   },
-  tabTextActive: {
+  tabLabelActive: {
     color: theme.colors.primary,
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    justifyContent: 'space-between',
     marginBottom: 24,
   },
   statBox: {
     width: '48%',
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 16,
+    backgroundColor: theme.colors.surface,
+    padding: 20,
+    borderRadius: 24,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderLeftWidth: 4,
+    borderLeftWidth: 5,
   },
   statVal: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '900',
     color: theme.colors.text,
   },
   statLab: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
     color: theme.colors.muted,
-    textTransform: 'uppercase',
+    marginTop: 4,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '800',
     color: theme.colors.text,
-    marginBottom: 16,
   },
   inventoryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    justifyContent: 'space-between',
   },
   inventoryCard: {
-    width: '31%',
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    width: '23%',
+    backgroundColor: theme.colors.surface,
+    borderRadius: 18,
     padding: 12,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: theme.colors.border,
     alignItems: 'center',
-    gap: 4,
   },
   invGroup: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '900',
     color: theme.colors.primary,
+    marginBottom: 4,
   },
   invVal: {
     fontSize: 18,
@@ -327,36 +377,42 @@ const styles = StyleSheet.create({
   invSub: {
     fontSize: 10,
     color: theme.colors.muted,
+    fontWeight: '600',
   },
   invLow: {
     color: theme.colors.danger,
   },
-  lowTag: {
+  lowBadge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: theme.colors.danger,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  lowBadgeText: {
     fontSize: 8,
     fontWeight: '900',
     color: '#fff',
-    backgroundColor: theme.colors.danger,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginTop: 4,
   },
   listContent: {
+    paddingHorizontal: 20,
     paddingBottom: 40,
   },
   requestCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
   reqHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+    alignItems: 'flex-start',
+    marginBottom: 16,
   },
   reqPatient: {
     fontSize: 16,
@@ -364,9 +420,9 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
   },
   statusPending: { backgroundColor: '#fef3c7' },
   statusAccepted: { backgroundColor: '#dbeafe' },
@@ -375,34 +431,44 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#333',
   },
   reqMeta: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: theme.colors.muted,
-    marginBottom: 4,
+    marginTop: 4,
+  },
+  reqFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.background,
   },
   reqDate: {
     fontSize: 12,
     color: theme.colors.muted,
+    fontWeight: '600',
   },
-  filterBar: {
-    flexDirection: 'row',
+  filterSection: {
+    paddingHorizontal: 20,
     marginBottom: 16,
-    height: 40,
+  },
+  filterScroll: {
+    gap: 8,
   },
   bloodChip: {
     paddingHorizontal: 16,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: theme.colors.surfaceMuted,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   bloodChipActive: {
     backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
   bloodChipText: {
     fontSize: 12,
@@ -414,9 +480,9 @@ const styles = StyleSheet.create({
   },
   donorCard: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 12,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 24,
+    padding: 16,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -424,55 +490,69 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   donorAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: theme.colors.primarySoft,
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: theme.colors.primary + '10',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
+    borderWidth: 1,
+    borderColor: theme.colors.primary + '20',
   },
   donorAvatarText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '900',
     color: theme.colors.primary,
   },
   donorInfo: {
     flex: 1,
-    gap: 2,
   },
   donorName: {
     fontSize: 16,
     fontWeight: '800',
     color: theme.colors.text,
   },
+  donorLocation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
   donorMeta: {
     fontSize: 12,
     color: theme.colors.muted,
+    fontWeight: '500',
   },
   donorTags: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 4,
+    marginTop: 8,
   },
   tag: {
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingVertical: 4,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   tagSuccess: { backgroundColor: '#dcfce7' },
-  tagMuted: { backgroundColor: '#f3f4f6' },
+  tagMuted: { backgroundColor: '#f1f5f9' },
   tagInfo: { backgroundColor: '#dbeafe' },
   tagText: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#333',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 100,
+    gap: 16,
   },
   emptyText: {
-    textAlign: 'center',
-    color: theme.colors.muted,
-    marginTop: 40,
     fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.muted,
+    textAlign: 'center',
   },
 });

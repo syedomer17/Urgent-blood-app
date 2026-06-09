@@ -7,7 +7,10 @@ import {
   StyleSheet,
   Text,
   View,
+  TouchableOpacity,
 } from 'react-native';
+import { ShieldCheck, UserCheck, XCircle, Info, Filter, Search } from 'lucide-react-native';
+import Toast from 'react-native-toast-message';
 import { fetchVerifications, handleVerification } from '../api/lifelink';
 import { Header } from '../components/Header';
 import { Screen } from '../components/Screen';
@@ -27,7 +30,11 @@ export function VerificationsScreen() {
       const data = await fetchVerifications();
       setUsers(data || []);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load pending verifications');
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to load pending verifications',
+      });
     } finally {
       setLoading(false);
     }
@@ -43,169 +50,271 @@ export function VerificationsScreen() {
   }, [users, roleFilter]);
 
   const handleAction = async (id: string, action: 'approve' | 'reject') => {
-    try {
-      if (action === 'reject') {
-        Alert.prompt(
-          'Rejection Reason',
-          'Enter a reason for rejection (optional)',
-          async (reason) => {
-            await handleVerification(id, action, reason);
-            Alert.alert('Success', 'Verification rejected');
-            loadPending();
+    Alert.alert(
+      action === 'approve' ? 'Approve Verification' : 'Reject Verification',
+      `Are you sure you want to ${action} this account?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: action === 'approve' ? 'Approve' : 'Reject', 
+          style: action === 'approve' ? 'default' : 'destructive',
+          onPress: async () => {
+            try {
+              await handleVerification(id, action);
+              Toast.show({
+                type: 'success',
+                text1: 'Success',
+                text2: `Verification ${action}d successfully`,
+              });
+              loadPending();
+            } catch (error) {
+              Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Action failed. Please try again.',
+              });
+            }
           }
-        );
-      } else {
-        await handleVerification(id, action);
-        Alert.alert('Success', 'Verification approved');
-        loadPending();
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Action failed');
-    }
+        }
+      ]
+    );
   };
 
   const renderItem = ({ item }: { item: User }) => (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <View>
-          <Text style={styles.name}>{item.name}</Text>
-          <Text style={styles.email}>{item.email}</Text>
-          <Text style={styles.roleTag}>{item.role.toUpperCase()}</Text>
-        </View>
-        {item.verification?.aiConfidence ? (
-          <View style={[styles.aiBadge, item.verification.aiSuggestedVerified ? styles.aiSuccess : styles.aiWarning]}>
-            <Text style={styles.aiText}>AI: {item.verification.aiConfidence}%</Text>
+        <View style={styles.userInfo}>
+          <View style={styles.avatarPlaceholder}>
+            <Text style={styles.avatarText}>{item.name.charAt(0).toUpperCase()}</Text>
           </View>
-        ) : null}
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={styles.name}>{item.name}</Text>
+            <Text style={styles.email}>{item.email}</Text>
+          </View>
+        </View>
+        <View style={styles.roleBadge}>
+          <Text style={styles.roleText}>{item.role.toUpperCase()}</Text>
+        </View>
       </View>
 
+      {item.verification?.aiConfidence ? (
+        <View style={[styles.aiInsight, item.verification.aiSuggestedVerified ? styles.aiSuccess : styles.aiWarning]}>
+          <ShieldCheck size={14} color={item.verification.aiSuggestedVerified ? '#166534' : '#92400e'} />
+          <Text style={[styles.aiText, { color: item.verification.aiSuggestedVerified ? '#166534' : '#92400e' }]}>
+            AI Confidence: {item.verification.aiConfidence}%
+          </Text>
+        </View>
+      ) : null}
+
       {item.role === 'hospital' && item.hospitalDetails && (
-        <View style={styles.details}>
-          <Text style={styles.detailLabel}>Hospital: <Text style={styles.detailValue}>{item.hospitalDetails.hospitalName}</Text></Text>
-          <Text style={styles.detailLabel}>Reg No: <Text style={styles.detailValue}>{item.hospitalDetails.registrationNumber}</Text></Text>
+        <View style={styles.detailsContainer}>
+          <View style={styles.detailRow}>
+            <Info size={14} color={theme.colors.muted} />
+            <Text style={styles.detailText}>
+              <Text style={{ fontWeight: '700' }}>Hospital:</Text> {item.hospitalDetails.hospitalName}
+            </Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Info size={14} color={theme.colors.muted} />
+            <Text style={styles.detailText}>
+              <Text style={{ fontWeight: '700' }}>Reg No:</Text> {item.hospitalDetails.registrationNumber}
+            </Text>
+          </View>
         </View>
       )}
 
       {item.verification?.aiDetails ? (
         <View style={styles.aiDetailsBox}>
-          <Text style={styles.aiDetailsTitle}>AI Analysis:</Text>
-          <Text style={styles.aiDetailsText} numberOfLines={3}>{item.verification.aiDetails}</Text>
+          <Text style={styles.aiDetailsTitle}>AI Analysis Output</Text>
+          <Text style={styles.aiDetailsText}>{item.verification.aiDetails}</Text>
         </View>
       ) : null}
 
       <View style={styles.actions}>
-        <Pressable
+        <TouchableOpacity
           style={[styles.actionBtn, styles.approveBtn]}
           onPress={() => handleAction(item._id, 'approve')}
+          activeOpacity={0.8}
         >
+          <UserCheck size={18} color="#fff" />
           <Text style={styles.approveBtnText}>Approve</Text>
-        </Pressable>
-        <Pressable
+        </TouchableOpacity>
+        <TouchableOpacity
           style={[styles.actionBtn, styles.rejectBtn]}
           onPress={() => handleAction(item._id, 'reject')}
+          activeOpacity={0.8}
         >
+          <XCircle size={18} color="#fff" />
           <Text style={styles.rejectBtnText}>Reject</Text>
-        </Pressable>
+        </TouchableOpacity>
       </View>
     </View>
   );
 
   return (
-    <Screen>
-      <Header title="Verifications" subtitle="Approve or reject pending accounts." />
+    <Screen scroll={false}>
+      <Header 
+        title="Pending Verify" 
+        subtitle="Manage user credibility" 
+      />
 
-      <View style={styles.filterContainer}>
-        {(['all', 'hospital', 'donor', 'requester'] as RoleFilter[]).map((f) => (
-          <Pressable
-            key={f}
-            onPress={() => setRoleFilter(f)}
-            style={[styles.filterBtn, roleFilter === f && styles.filterBtnActive]}
-          >
-            <Text style={[styles.filterBtnText, roleFilter === f && styles.filterBtnTextActive]}>
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </Text>
-          </Pressable>
-        ))}
+      <View style={styles.container}>
+        <View style={styles.filterSection}>
+          <View style={styles.filterIconContainer}>
+            <Filter size={18} color={theme.colors.muted} />
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+            {(['all', 'hospital', 'donor', 'requester'] as RoleFilter[]).map((f) => (
+              <TouchableOpacity
+                key={f}
+                onPress={() => setRoleFilter(f)}
+                style={[styles.filterChip, roleFilter === f && styles.filterChipActive]}
+              >
+                <Text style={[styles.filterChipText, roleFilter === f && styles.filterChipTextActive]}>
+                  {f.charAt(0).toUpperCase() + f.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {loading && users.length === 0 ? (
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={styles.loadingText}>Fetching pending users...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={visibleUsers}
+            keyExtractor={(item) => item._id}
+            renderItem={renderItem}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <ShieldCheck size={48} color={theme.colors.border} />
+                <Text style={styles.emptyText}>All caught up!</Text>
+                <Text style={styles.emptySubtext}>No pending verifications for this role.</Text>
+              </View>
+            }
+            contentContainerStyle={styles.listContent}
+            onRefresh={loadPending}
+            refreshing={loading}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
       </View>
-
-      {loading ? (
-        <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 40 }} />
-      ) : (
-        <FlatList
-          data={visibleUsers}
-          keyExtractor={(item) => item._id}
-          renderItem={renderItem}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>No pending verifications for this role.</Text>
-          }
-          contentContainerStyle={{ paddingBottom: 20 }}
-          onRefresh={loadPending}
-          refreshing={loading}
-        />
-      )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  filterContainer: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.surfaceMuted,
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 16,
-  },
-  filterBtn: {
+  container: {
     flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: 8,
+    paddingHorizontal: 20,
   },
-  filterBtnActive: {
+  filterSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    backgroundColor: theme.colors.surface,
+    padding: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  filterIconContainer: {
+    paddingRight: 12,
+    borderRightWidth: 1,
+    borderRightColor: theme.colors.border,
+    marginRight: 12,
+  },
+  filterScroll: {
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: theme.colors.background,
+  },
+  filterChipActive: {
     backgroundColor: theme.colors.primary,
   },
-  filterBtnText: {
-    fontSize: 12,
+  filterChipText: {
+    fontSize: 13,
     fontWeight: '700',
     color: theme.colors.muted,
   },
-  filterBtnTextActive: {
+  filterChipTextActive: {
     color: '#fff',
   },
   card: {
     backgroundColor: theme.colors.surface,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 16,
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  avatarPlaceholder: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: theme.colors.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: theme.colors.primary,
   },
   name: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
     color: theme.colors.text,
   },
   email: {
-    fontSize: 14,
+    fontSize: 13,
     color: theme.colors.muted,
+    marginTop: 2,
   },
-  roleTag: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: theme.colors.primary,
-    marginTop: 4,
-    letterSpacing: 1,
-  },
-  aiBadge: {
-    paddingHorizontal: 10,
+  roleBadge: {
+    backgroundColor: theme.colors.background,
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 20,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  roleText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: theme.colors.primary,
+    letterSpacing: 0.5,
+  },
+  aiInsight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 12,
+    marginBottom: 16,
+    gap: 8,
   },
   aiSuccess: {
     backgroundColor: '#dcfce7',
@@ -214,43 +323,45 @@ const styles = StyleSheet.create({
     backgroundColor: '#fef3c7',
   },
   aiText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#166534',
-  },
-  details: {
-    backgroundColor: theme.colors.background,
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  detailLabel: {
     fontSize: 12,
-    color: theme.colors.muted,
-    fontWeight: '600',
-  },
-  detailValue: {
-    color: theme.colors.text,
     fontWeight: '700',
+  },
+  detailsContainer: {
+    backgroundColor: theme.colors.background,
+    padding: 14,
+    borderRadius: 16,
+    marginBottom: 16,
+    gap: 8,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  detailText: {
+    fontSize: 13,
+    color: theme.colors.text,
+    flex: 1,
   },
   aiDetailsBox: {
     backgroundColor: '#f8fafc',
-    padding: 10,
-    borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: '#cbd5e1',
-    marginBottom: 16,
+    padding: 12,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: theme.colors.primary,
+    marginBottom: 20,
   },
   aiDetailsTitle: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#64748b',
-    marginBottom: 2,
+    color: theme.colors.muted,
+    textTransform: 'uppercase',
+    marginBottom: 4,
   },
   aiDetailsText: {
-    fontSize: 12,
-    color: '#475569',
-    fontStyle: 'italic',
+    fontSize: 13,
+    color: '#334155',
+    lineHeight: 18,
   },
   actions: {
     flexDirection: 'row',
@@ -258,10 +369,12 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     flex: 1,
-    height: 44,
-    borderRadius: 10,
+    height: 48,
+    borderRadius: 14,
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 8,
   },
   approveBtn: {
     backgroundColor: theme.colors.success,
@@ -269,6 +382,7 @@ const styles = StyleSheet.create({
   approveBtnText: {
     color: '#fff',
     fontWeight: '800',
+    fontSize: 14,
   },
   rejectBtn: {
     backgroundColor: theme.colors.danger,
@@ -276,11 +390,37 @@ const styles = StyleSheet.create({
   rejectBtnText: {
     color: '#fff',
     fontWeight: '800',
+    fontSize: 14,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 100,
+  },
+  loadingText: {
+    marginTop: 12,
+    color: theme.colors.muted,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 80,
+    gap: 12,
   },
   emptyText: {
-    textAlign: 'center',
+    fontSize: 20,
+    fontWeight: '800',
+    color: theme.colors.text,
+  },
+  emptySubtext: {
+    fontSize: 14,
     color: theme.colors.muted,
-    marginTop: 40,
-    fontSize: 16,
+    textAlign: 'center',
+  },
+  listContent: {
+    paddingBottom: 40,
   },
 });

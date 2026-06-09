@@ -118,6 +118,10 @@ export function fetchAdminRequests() {
   return apiRequest<BloodRequest[]>('/api/v1/admin/requests');
 }
 
+export function fetchActionableRequests() {
+  return apiRequest<BloodRequest[]>('/api/v1/admin/requests/actionable');
+}
+
 export function fetchAdminReports() {
   return apiRequest<AdminReports>('/api/v1/admin/reports');
 }
@@ -138,9 +142,35 @@ export function handleVerification(id: string, action: 'approve' | 'reject', rea
 }
 
 export function updateUserStatus(id: string, status: 'active' | 'suspended' | 'blocked') {
-  return apiRequest<unknown>(`/api/v1/admin/users/${id}/status`, {
+  return apiRequest<unknown>(`/api/v1/admin/users/${id}/${status}`, {
     method: 'PATCH',
-    body: JSON.stringify({ status }),
+  });
+}
+
+export function handleEmergencyRequest(id: string, action: 'approve' | 'reject', reason?: string) {
+  return apiRequest<BloodRequest>(`/api/v1/admin/requests/${id}/${action}-emergency`, {
+    method: 'PATCH',
+    body: action === 'reject' ? JSON.stringify({ reason }) : undefined,
+  });
+}
+
+export function fulfillRequest(id: string) {
+  return apiRequest<BloodRequest>(`/api/v1/admin/requests/${id}/fulfill`, {
+    method: 'PATCH',
+  });
+}
+
+export function cancelRequest(id: string, reason?: string) {
+  return apiRequest<BloodRequest>(`/api/v1/admin/requests/${id}/cancel`, {
+    method: 'PATCH',
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export function sendEmergencyAlert(input: { bloodGroup: string; message: string; region?: string }) {
+  return apiRequest<unknown>('/api/v1/admin/alerts/emergency', {
+    method: 'POST',
+    body: JSON.stringify(input),
   });
 }
 
