@@ -1,0 +1,261 @@
+LifeLink API Endpoints
+
+Format: [METHOD] [URL] - [ROLE] - [BODY DATA]
+
+================================================================================
+AUTHENTICATION (/api/v1/auth)
+================================================================================
+
+[POST] /register - Public
+Body: {
+  "name": "string (required)",
+  "email": "string (required, email)",
+  "password": "string (required, min 6)",
+  "role": "string (donor|requester|hospital, default: donor)",
+  "bloodGroup": "string (A+|A-|B+|B-|AB+|AB-|O+|O-, required if donor)",
+  "contactNumber": "string (optional)",
+  "location": {
+    "latitude": "number",
+    "longitude": "number",
+    "address": "string",
+    "state": "string",
+    "city": "string",
+    "zipCode": "string",
+    "areaName": "string"
+  } (optional)
+}
+
+[POST] /register-hospital - Public (Multipart/form-data)
+Body: {
+  "name": "string (required)",
+  "email": "string (required, email)",
+  "password": "string (required, min 6)",
+  "role": "string (hospital, required)",
+  "contactNumber": "string (optional)",
+  "hospitalName": "string (required)",
+  "registrationNumber": "string (required)",
+  "licenseNumber": "string (required)",
+  "gstNumber": "string (optional)",
+  "hospitalAddress": "string (required)",
+  "hospitalEmail": "string (required, email)",
+  "hospitalPhone": "string (required)",
+  "location": { ...same as register... } (optional),
+  "document": "file (required, JPG|PNG|WebP|PDF)"
+}
+
+[POST] /login - Public
+Body: {
+  "email": "string (required, email)",
+  "password": "string (required)"
+}
+
+[POST] /refresh-token - Public
+Body: {
+  "refreshToken": "string (optional if in cookie)"
+}
+
+[POST] /logout - Authenticated
+Body: {
+  "refreshToken": "string (required)"
+}
+
+
+================================================================================
+USERS (/api/v1/users)
+================================================================================
+
+[GET] / - Authenticated
+Description: Get all users
+
+[GET] /donors - Authenticated
+Description: Get donors with location for map
+
+[GET] /profile - Authenticated
+Description: Get current user profile
+
+[PATCH] /profile - Authenticated
+Body: {
+  "name": "string",
+  "bloodGroup": "string (A+|A-|B+|B-|AB+|AB-|O+|O-)",
+  "availability": "boolean",
+  "dateOfBirth": "string (ISO date)",
+  "weightKg": "number (30-250)",
+  "medicalConditions": "string[]",
+  "nextReminderAt": "string (ISO date)",
+  "reminderEnabled": "boolean",
+  "location": {
+    "latitude": "number",
+    "longitude": "number",
+    "address": "string",
+    "country": "string (required)",
+    "state": "string (required)",
+    "city": "string (required)",
+    "zipCode": "string",
+    "areaName": "string"
+  }
+}
+
+
+================================================================================
+BLOOD REQUESTS (/api/v1/requests)
+================================================================================
+
+[GET] / - Authenticated
+Description: Get all blood requests
+
+[GET] /map-data - Authenticated
+Description: Get pending requests with location for map
+
+[POST] / - Role: requester | hospital | admin
+Body: {
+  "patientName": "string (required)",
+  "hospitalName": "string (required)",
+  "requiredDate": "string (required, ISO date)",
+  "expiresAt": "string (optional, ISO date)",
+  "bloodGroup": "string (required, A+|A-|B+|B-|AB+|AB-|O+|O-)",
+  "unitsRequired": "number (required, min 1)",
+  "urgency": "string (required, low|medium|high|critical)",
+  "location": {
+    "latitude": "number",
+    "longitude": "number",
+    "address": "string",
+    "state": "string",
+    "city": "string",
+    "zipCode": "string",
+    "areaName": "string"
+  } (required),
+  "contactNumber": "string (required)",
+  "notes": "string (optional)",
+  "documentVerification": {
+    "isVerified": "boolean (required)",
+    "confidence": "number (0-1)",
+    "hospitalName": "string",
+    "documentType": "string",
+    "patientName": "string",
+    "bloodGroup": "string",
+    "details": "string",
+    "flags": "string[]"
+  } (optional)
+}
+
+[POST] /verify-document - Role: requester | hospital | admin (Multipart/form-data)
+Body: {
+  "document": "file (required)"
+}
+
+[GET] /my-requests - Role: requester | hospital
+Description: Get logged-in user's requests
+
+[GET] /:id/matches - Authenticated
+Description: Get matching donors for a request
+
+[GET] /:id - Authenticated
+Description: Get specific blood request details
+
+
+================================================================================
+DONATIONS (/api/v1/donations)
+================================================================================
+
+[POST] /accept - Role: donor
+Body: {
+  "requestId": "string (required)"
+}
+
+[GET] /history - Role: donor
+Description: Get my donation history
+
+[GET] /leaderboard - Authenticated
+Description: Get donor leaderboard
+
+
+================================================================================
+ADMIN (/api/v1/admin) - All require Role: admin
+================================================================================
+
+[GET] /stats
+Description: Dashboard statistics
+
+[GET] /verifications
+Description: Pending hospital verifications
+
+[PATCH] /verifications/:id/approve
+Description: Approve hospital verification
+
+[PATCH] /verifications/:id/reject
+Description: Reject hospital verification
+
+[GET] /users
+Description: Get all users
+
+[PATCH] /users/:id/suspend
+Description: Suspend user
+
+[PATCH] /users/:id/activate
+Description: Activate user
+
+[PATCH] /users/:id/block
+Description: Block user
+
+[GET] /requests
+Description: Get all requests
+
+[GET] /requests/actionable
+Description: Get actionable requests
+
+[PATCH] /requests/:id/approve-emergency
+Description: Approve emergency request
+
+[PATCH] /requests/:id/reject-emergency
+Description: Reject emergency request
+
+[PATCH] /requests/:id/fulfill
+Description: Fulfill request
+
+[PATCH] /requests/:id/cancel
+Body: { "reason": "string" } (optional)
+
+[POST] /alerts/emergency
+Body: {
+  "bloodGroup": "string (default: O-)",
+  "message": "string",
+  "region": "string"
+}
+
+[GET] /reports
+Description: Get reports
+
+[GET] /audit-logs
+Description: Get audit logs
+
+
+================================================================================
+DONORS (/api/v1/donors)
+================================================================================
+
+[GET] / - Authenticated
+Description: Get all donors with location data
+
+[GET] /near - Authenticated
+Query Params: lat, lng, radius (default 10000m)
+
+[GET] /search - Authenticated
+Query Params: city
+
+
+================================================================================
+CHAT (/api/v1/chat)
+================================================================================
+
+[GET] /inbox - Authenticated
+[GET] /unread - Authenticated
+[GET] /:peerId - Authenticated
+
+
+================================================================================
+NOTIFICATIONS (/api/v1/notifications)
+================================================================================
+
+[GET] / - Authenticated
+[GET] /unread-count - Authenticated
+[PATCH] /:id/read - Authenticated

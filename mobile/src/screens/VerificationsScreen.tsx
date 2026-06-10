@@ -8,6 +8,7 @@ import {
   Text,
   View,
   TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import { ShieldCheck, UserCheck, XCircle, Info, Filter, Search } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
